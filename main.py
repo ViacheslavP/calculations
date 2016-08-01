@@ -4,50 +4,37 @@ Created 23.07.16
 
 AS Sheremet's matlab code implementation 
 
-what the dielectric susceptibility of fiber? n = 1.45?
-why do phi calculates in phi(x-a,y)?
+n = 1.45?
 
 UNSOLVED:
 Selection rules
-Unitarity error (r+t>1)
+
 
 FUTURE:
-Double-Chain ensemble, Random ensemble(? idk how to), 
-Use GPU for sparse matrix linsolve (inverse function)
+Random ensemble(? idk how to), 
+Use GPU for sparse matrix linsolve (inverse function could be rewritten on cuda
+in nopython flags)
+
+
 """
-import mkl
-#from theano import tensor as T
-#from theano import function
-#from theano import sparse as t_sp
+
+try:
+    import mkl
+    mkl.set_num_threads(mkl.get_max_threads())
+    mkl.service.set_num_threads(mkl.get_max_threads())
+except ImportError:
+    print('MKL does not installed. MKL dramatically improves calculation time')
+    
+    
 from scipy.sparse import linalg as alg
 from scipy.sparse import csr_matrix as csc
 import numpy as np
 from time import time
 
 
-mkl.set_num_threads(2)
-mkl.service.set_num_threads(2)
-
-
 def inverse(ResInv,ddRight):
-
     return alg.spsolve(csc(ResInv),ddRight)
-"""
-spec = [
-('rr', complex64[:,:]),
-('phib',complex64[:]),
-('xm',complex64[:,:]),
-('xp',complex64[:,:]),
-('x0',complex64[:,:]),
-('index',int32[:,:]),
-('state',int32[:,:]),
-('D',complex64[:,:]),
-('Transmittance', complex64[:]),
-('Reflection', complex64[:])
 
-]
-@jitclass(spec) 
-"""
 class ensemble(object):
     
         """
@@ -56,12 +43,11 @@ class ensemble(object):
         def __init__(self):
         
             self.rr = np.array([[]])
-            self.phib = np.array([])
+            self.phib = np.array([],dtype=complex)
             self.xm = np.array([[]],dtype=complex)
             self.xp = np.array([[]],dtype=complex)
             self.x0 = np.array([[]],dtype=complex)
             self.index = np.array([[]])
-            self.state = np.array([[]])
             self.D = np.zeros([nat*3**nb,nat*3**nb],dtype=complex)
             #self.CrSec = np.zeros(nsp);
             self.Transmittance = np.zeros(nsp,dtype=complex);
@@ -88,7 +74,7 @@ class ensemble(object):
         
             t1 = time()
             
-            self.phib = 1/np.sqrt(2*np.pi*wb**2)*np.exp(((0)**2+y**2)/2/wb/wb) #insert x            
+            self.phib = 1/np.sqrt(2*np.pi*wb**2)*np.exp(((x)**2+y**2)/2/wb/wb)        
             
             self.rr = np.array(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
             -z[j])**2)for i in range(nat)] for j in range(nat)]))
@@ -103,43 +89,41 @@ class ensemble(object):
             np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)])
             
             self.index = np.argsort(self.rr)[:,1:nb+1]
-            self.generate_states()
             self.create_D_matrix()
             self.reflection_calc()
             
             print('Ensemble was generated for ',time()-t1,'s')
             
             
-            
-        def generate_states(self):
-            from itertools import product as combi
-            
+        def create_D_matrix(self):
             """
             Method creates auxiliary matrix (we need it to fill St-matrix)
             We consider situation when the atom interacts just with some neighbours.
             It's mean that we should consider St-matrix only for this neighbours. For
             all other atoms we consider only self-interaction and elements of
             St-matrix would be the same for this elements.
-            1 - atom is in state with m = -1,
-            2 - atom is in state with m = 0,
-            3 - atom is in state with m = 1. We assume that it t=0 all atoms in state
+            0 - atom is in state with m = -1,
+            1 - atom is in state with m = 0,
+            2 - atom is in state with m = 1. We assume that it t=0 all atoms in state
             with m = 1.
-            states - matrix ideces of resolvent
-            
             """
-            self.state = np.asarray([i for i in combi(range(3),repeat=nb)])
+            from itertools import product as combi
+            state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
             
-        def waveguide_g(self):
-            pass
-            
-        def create_D_matrix(self):
+            st = np.ones([nat,nat,3**nb])*2
+            for n1 in range(nat):
+                k=0
+                for n2 in self.index[n1,:]:
+                    for i in range(3**nb):
+                        st[n1,n2,i] = state[i,k]
+                    k+=1  
             """
             selection rules
             """
             def foo(n1,n2,i,j):
                 for k1 in range(nat):
                     if k1 == n1 or k1 == n2: continue;
-                    if (st[k1,n1,i]!=st[k1,n2,j]):
+                    if (st[n1,k1,i]!=st[n2,k1,j]):
                         return False
                 return True
                 
@@ -162,28 +146,21 @@ class ensemble(object):
             Di[:,:,0,1] = d01m*d00*(-self.xp*self.x0*D2);
             Di[:,:,0,2] = d01m*d10*(-self.xp*self.xp*D2);
             Di[:,:,1,0] = d00*d1m0*(self.x0*self.xm*D2);
-            Di[:,:,1,1] = d00*d00*(D1 + self.x0*self.x0*D2)+D3;
+            Di[:,:,1,1] = d00*d00*(D1 + self.x0*self.x0*D2)+D3; #not sure abou sign of D3
             Di[:,:,1,2] = d00*d10*(self.x0*self.xp*D2);
             Di[:,:,2,0] = d01*d1m0*(-self.xm*self.xm*D2);
             Di[:,:,2,1] = d01*d00*(-self.xm*self.x0*D2);
             Di[:,:,2,2] = d01*d10*(D1 - self.xm*self.xp*D2);
             
-            st = np.ones([nat,nat,3**nb])*2
-            for n1 in range(nat):
-                k=0
-                for n2 in self.index[n1,:]:
-                    for i in range(3**nb):
-                        st[n1,n2,i] = self.state[i,k]
-                    k+=1  
                     
-            for n1 in range(nat):
+            for n1 in range(nat):              #choose excited atom
                 k = 0
-                for n2 in self.index[n1]:
-                    for i in range(3**nb):
-                        for j in range(3**nb):
-                            if foo(n1,n2,i,j):
+                for n2 in self.index[n1,:]:    #choose neighbour
+                    for i in range(3**nb):     #select excited atom environment
+                        for j in range(3**nb): #select neighbour environment
+                            if foo(n1,n2,i,j): #if transition is possible then make assigment
                                 self.D[n1*3**nb+i,n2*3**nb+j] =  \
-                                Di[n1,n2,self.state[i,k],self.state[j,k]]
+                                Di[n1,n2,state[i,k],state[j,k]]
                     k+=1            
             
         def reflection_calc(self):
@@ -223,12 +200,22 @@ class ensemble(object):
                 
         def visualize(self):
             import matplotlib.pyplot as plt
+            plt.subplot(1,3,1)            
             plt.plot(deltaP,(abs(self.Reflection)**2 ), 'r-')
-            plt.show()
-            plt.plot(deltaP, abs(self.Transmittance)**2, 'm-.')
-            plt.show()
+            plt.title('Reflection')
+            plt.ylabel('$|r|^2$')
+            
+            plt.subplot(1,3,2) 
+            plt.plot(deltaP, abs(self.Transmittance)**2, 'm-')
+            plt.title('Transmittance')
+            plt.ylabel('$|t|^2$')
+            
+            plt.subplot(1,3,3)
             plt.plot(deltaP, np.ones(nsp)-(abs(self.Reflection)**2\
-            +abs(self.Transmittance)**2), '-.')
+            +abs(self.Transmittance)**2), 'g-')
+            plt.title('Loss')
+            plt.ylabel('$1-|r|^2-|t|^2$')
+            
             plt.show()
 
 
@@ -267,7 +254,7 @@ wb = 3
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 40; #number of atoms
+nat = 5; #number of atoms
 #if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = lambd0 #minimized size between neighbours 
