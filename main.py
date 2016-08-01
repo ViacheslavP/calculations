@@ -97,7 +97,11 @@ class ensemble(object):
             
         def create_D_matrix(self):
             """
-            Method creates auxiliary matrix (we need it to fill St-matrix)
+            Method creates st-matrix, then creates D matrix and reshapes D 
+            matrix into 2x2 matrix with respect to selection rules
+            
+
+            
             We consider situation when the atom interacts just with some neighbours.
             It's mean that we should consider St-matrix only for this neighbours. For
             all other atoms we consider only self-interaction and elements of
@@ -117,8 +121,16 @@ class ensemble(object):
                     for i in range(3**nb):
                         st[n1,n2,i] = state[i,k]
                     k+=1  
+            
             """
-            selection rules
+            condition of selection for nb = 3
+            st[n1,:,i] = [... 2, i0, 2(n1'th position) ,i1(n2'th position), i2   3...] 
+            st[n2,:,j] = [... 2, 2, j0(n1'th position), 2(n2'th position),  j1, j2 ..]
+            
+            ik = state[i,k]
+            
+            the condition of transition from i to j is j1 = i2, j2 = 3 
+            (we exclude n1't and n2'th positions)
             """
             def foo(n1,n2,i,j):
                 for k1 in range(nat):
@@ -127,8 +139,6 @@ class ensemble(object):
                         return False
                 return True
                 
-            """
-            """
                 
             D1 = hbar*kv*((1 - 1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
             np.identity(nat))**3)*np.exp(-1j*self.rr))*(np.ones(nat)-np.identity(nat)))   
@@ -254,7 +264,7 @@ wb = 3
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 5; #number of atoms
+nat = 15; #number of atoms
 #if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = lambd0 #minimized size between neighbours 
