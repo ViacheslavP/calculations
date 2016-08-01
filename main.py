@@ -98,7 +98,7 @@ class ensemble(object):
         def create_D_matrix(self):
             """
             Method creates st-matrix, then creates D matrix and reshapes D 
-            matrix into 2x2 matrix with respect to selection rules
+            matrix into 1+1 matrix with respect to selection rules
             
 
             
