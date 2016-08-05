@@ -121,7 +121,6 @@ class ensemble(object):
                     for i in range(3**nb):
                         st[n1,n2,i] = state[i,k]
                     k+=1  
-            
             """
             condition of selection for nb = 3
             st[n1,:,i] = [... 2, i0, 2(n1'th position) ,i1(n2'th position), i2   3...] 
@@ -132,7 +131,9 @@ class ensemble(object):
             the condition of transition from i to j is j1 = i2, j2 = 3 
             (we exclude n1't and n2'th positions)
             """
+
             def foo(n1,n2,i,j):
+
                 for k1 in range(nat):
                     if k1 == n1 or k1 == n2: continue;
                     if (st[n1,k1,i]!=st[n2,k1,j]):
@@ -150,13 +151,12 @@ class ensemble(object):
                     D3[i,j] = kv*(1/vg-1/c)*self.phib[i]*self.phib[j]*\
                     np.exp(1j*kv*self.x0[i,j]*self.rr[i,j])  
 
-            
             Di = np.zeros([nat,nat,3,3], dtype = complex)
-            Di[:,:,0,0] = d01m*d1m0*(D1 - self.xp*self.xm*D2)+D3;
-            Di[:,:,0,1] = d01m*d00*(-self.xp*self.x0*D2);
+            Di[:,:,0,0] = d01m*d1m0*(D1 - self.xp*self.xm*D2);
+            Di[:,:,0,1] = d01m*d00*(-self.xp*self.x0*D2-D3);
             Di[:,:,0,2] = d01m*d10*(-self.xp*self.xp*D2);
-            Di[:,:,1,0] = d00*d1m0*(self.x0*self.xm*D2);
-            Di[:,:,1,1] = d00*d00*(D1 + self.x0*self.x0*D2)+D3; #not sure abou sign of D3
+            Di[:,:,1,0] = d00*d1m0*(self.x0*self.xm*D2-D3);
+            Di[:,:,1,1] = d00*d00*(D1 + self.x0*self.x0*D2); #not sure abou sign of D3
             Di[:,:,1,2] = d00*d10*(self.x0*self.xp*D2);
             Di[:,:,2,0] = d01*d1m0*(-self.xm*self.xm*D2);
             Di[:,:,2,1] = d01*d00*(-self.xm*self.x0*D2);
@@ -260,18 +260,19 @@ d1m0 = d01m;
 vg = 0.83375 #group velocity
 g = 1.06586;  #decay rate corrected in presence of a nanofiber, units of gamma 
 kv = 1.09629/lambd; #propogation constant (longitudial wavevector)
-wb = 3
+wb = 1.5
+
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 15; #number of atoms
-#if nat%2 == 1: nat+=1
+nat = 35; #number of atoms
+if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = lambd0 #minimized size between neighbours 
 Lz = 1.
 #frequency detuning scale 
 
-deltaP = np.arange(-15, 15, 0.1)*gd
+deltaP = np.arange(-10, 10, 1)*gd
 nsp = len(deltaP);
 #V = nat/n0;   %quantization volume
 
@@ -282,6 +283,9 @@ Executing program
 ______________________________________________________________________________
 """
 
-chain = ensemble()
-chain.generate_ensemble('chain')
-chain.visualize()
+chi = ensemble()
+chi.generate_ensemble('doublechain')
+chi.visualize()
+
+
+        
