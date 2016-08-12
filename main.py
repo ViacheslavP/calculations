@@ -44,7 +44,7 @@ class ensemble(object):
         
             self.rr = np.array([[]])
             self.phib = np.array([],dtype=complex)
-            self.xm = np.array([[]],dtype=complex)
+            self.xm = np.zeros([nat,nat],dtype=complex)
             self.xp = np.array([[]],dtype=complex)
             self.x0 = np.array([[]],dtype=complex)
             self.index = np.array([[]])
@@ -53,7 +53,7 @@ class ensemble(object):
             self.Transmittance = np.zeros(nsp,dtype=complex);
             self.Reflection = np.zeros(nsp,dtype=complex);
             self._foo = [[[]]]
-        def generate_ensemble(self, s='chain'):
+        def generate_ensemble(self, s='chain', dist = .0):
     
             """
             Method generates enseble for current atomic ensemble properties and
@@ -68,25 +68,31 @@ class ensemble(object):
                 x = 1.5*a*np.asarray([np.sign(i - nat/2) for i in range(nat)])
                 y = 0.*np.ones(nat)
                 goo = [i for i in range(nat//2)]
-                z = np.asarray(goo+goo)
+                z = np.asarray(goo+goo)*1.
             else:
                 raise NameError('Ensemble type not found')
+            
+            if dist != .0:
+                x+= np.random.normal(0.0, dist*lambd, nat)
+                #y+= np.random.normal(0.0, dist*lambd, nat)
+                #z+= np.random.normal(0.0, dist*lambd, nat)
+                
+            
         
             t1 = time()
             
             self.phib = 1/np.sqrt(2*np.pi*wb**2)*np.exp(((x)**2+y**2)/2/wb/wb)        
             
-            self.rr = np.array(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
-            -z[j])**2)for i in range(nat)] for j in range(nat)]))
+            self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
+            -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
+            self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
+            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)
         
-            self.xm = np.array([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)])
+            self.xp = -np.asarray([[((x[i]-x[j])+1j*(y[i]-y[j]))/(self.rr[i,j]+ \
+            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)
         
-            self.xp = -np.array([[((x[i]-x[j])+1j*(y[i]-y[j]))/(self.rr[i,j]+ \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)])
-        
-            self.x0 = np.array([[(z[i]-z[j])/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)])
+            self.x0 = np.asarray([[(z[i]-z[j])/(self.rr[i,j] + \
+            np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)],dtype=complex)
             
             self.index = np.argsort(self.rr)[:,1:nb+1]
             self.create_D_matrix()
@@ -114,7 +120,7 @@ class ensemble(object):
             from itertools import product as combi
             state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
             
-            st = np.ones([nat,nat,3**nb])*2
+            st = np.ones([nat,nat,3**nb], dtype = int)*2
             for n1 in range(nat):
                 k=0
                 for n2 in self.index[n1,:]:
@@ -132,46 +138,50 @@ class ensemble(object):
             (we exclude n1't and n2'th positions)
             """
 
-            def foo(n1,n2,i,j):
+            def foo(ni1,nj2,i,j):
 
                 for k1 in range(nat):
-                    if k1 == n1 or k1 == n2: continue;
-                    if (st[n1,k1,i]!=st[n2,k1,j]):
+                    if k1 == ni1 or k1 == nj2: continue;
+                    if (st[ni1,k1,i] != st[nj2,k1,j]):
                         return False
                 return True
                 
                 
             D1 = hbar*kv*((1 - 1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
             np.identity(nat))**3)*np.exp(-1j*self.rr))*(np.ones(nat)-np.identity(nat)))   
-            D2 = -hbar*kv*((3 - 3*1j*self.rr - self.rr**2)/(((kv**3)*(self.rr-\
+            D2 = -hbar*kv*((3 - 3*1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
             lambd*np.identity(nat))**3))*np.exp(1j*self.rr))
             D3 = np.zeros([nat,nat], dtype=complex)            
             for i in range(nat):
                 for j in range(nat):
                     D3[i,j] = kv*(1/vg-1/c)*self.phib[i]*self.phib[j]*\
                     np.exp(1j*kv*self.x0[i,j]*self.rr[i,j])  
-
-            Di = np.zeros([nat,nat,3,3], dtype = complex)
-            Di[:,:,0,0] = d01m*d1m0*(D1 - self.xp*self.xm*D2);
-            Di[:,:,0,1] = d01m*d00*(-self.xp*self.x0*D2-D3);
-            Di[:,:,0,2] = d01m*d10*(-self.xp*self.xp*D2);
-            Di[:,:,1,0] = d00*d1m0*(self.x0*self.xm*D2-D3);
-            Di[:,:,1,1] = d00*d00*(D1 + self.x0*self.x0*D2); #not sure abou sign of D3
-            Di[:,:,1,2] = d00*d10*(self.x0*self.xp*D2);
-            Di[:,:,2,0] = d01*d1m0*(-self.xm*self.xm*D2);
-            Di[:,:,2,1] = d01*d00*(-self.xm*self.x0*D2);
-            Di[:,:,2,2] = d01*d10*(D1 - self.xm*self.xp*D2);
-            
                     
-            for n1 in range(nat):              #choose excited atom
-                k = 0
-                for n2 in self.index[n1,:]:    #choose neighbour
-                    for i in range(3**nb):     #select excited atom environment
-                        for j in range(3**nb): #select neighbour environment
-                            if foo(n1,n2,i,j): #if transition is possible then make assigment
-                                self.D[n1*3**nb+i,n2*3**nb+j] =  \
-                                Di[n1,n2,state[i,k],state[j,k]]
-                    k+=1            
+                    
+            Di = np.zeros([nat,nat,3,3], dtype = complex)
+            for i in range(nat):
+                for j in range(nat):
+                    
+                    Di[i,j,0,0] = d01m*d1m0*(D1[i,j] - self.xp[i,j]*self.xm[i,j]*D2[i,j]+D3[i,j]);
+                    Di[i,j,0,1] = d01m*d00*(-self.xp[i,j]*self.x0[i,j]*D2[i,j]);
+                    Di[i,j,0,2] = d01m*d10*(-self.xp[i,j]*self.xp[i,j]*D2[i,j]);
+                    Di[i,j,1,0] = d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j]);
+                    Di[i,j,1,1] = d00*d00*(D1[i,j] + self.x0[i,j]*self.x0[i,j]*D2[i,j]+D3[i,j]); 
+                    Di[i,j,1,2] = d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j]);
+                    Di[i,j,2,0] = d01*d1m0*(-self.xm[i,j]*self.xm[i,j]*D2[i,j]);
+                    Di[i,j,2,1] = d01*d00*(-self.xm[i,j]*self.x0[i,j]*D2[i,j]);
+                    Di[i,j,2,2] = d01*d10*(D1[i,j] - self.xm[i,j]*self.xp[i,j]*D2[i,j]);
+                          
+            for n1 in range(nat):       #choose excited atom
+                for i in range(3**nb):  #select excited atom environment
+                    k = 0               #count number of neighbour
+                    for n2 in self.index[n1,:]:    #choose neighbour
+                       for j in range(3**nb):      #select neighbour environment
+                            if foo(n1,n2,i,j):     #if transition is possible then make assigment
+                       
+                                self.D[n1*3**nb+i,n2*3**nb+j] = \
+                                Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
+                       k+=1
             
         def reflection_calc(self):
             
@@ -265,14 +275,14 @@ wb = 1.5
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 35; #number of atoms
-if nat%2 == 1: nat+=1
+nat = 15; #number of atoms
+#if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = lambd0 #minimized size between neighbours 
 Lz = 1.
 #frequency detuning scale 
 
-deltaP = np.arange(-10, 10, 1)*gd
+deltaP = np.arange(0, 2, 1)*gd
 nsp = len(deltaP);
 #V = nat/n0;   %quantization volume
 
@@ -284,8 +294,15 @@ ______________________________________________________________________________
 """
 
 chi = ensemble()
-chi.generate_ensemble('doublechain')
+chi.generate_ensemble('chain',dist = 0.1*lambd)
 chi.visualize()
 
-
-        
+s = []
+for i in range(4,200):
+    nat = i
+    chi = ensemble()
+    chi.generate_ensemble('chain', dist = 0.1*lambd)
+    s.append(chi.Transmittance[0])
+from matplotlib import pyplot as plt
+plt.plot(range(4,200),s)
+plt.show()
