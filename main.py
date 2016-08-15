@@ -98,7 +98,7 @@ class ensemble(object):
             self.create_D_matrix()
             self.reflection_calc()
             
-            print('Ensemble was generated for ',time()-t1,'s')
+            #print('Ensemble was generated for ',time()-t1,'s')
             
             
         def create_D_matrix(self):
@@ -157,7 +157,7 @@ class ensemble(object):
                     D3[i,j] = kv*(1/vg-1/c)*self.phib[i]*self.phib[j]*\
                     np.exp(1j*kv*self.x0[i,j]*self.rr[i,j])  
                     
-                    
+                     
             Di = np.zeros([nat,nat,3,3], dtype = complex)
             for i in range(nat):
                 for j in range(nat):
@@ -189,11 +189,9 @@ class ensemble(object):
             ddLeftB = np.zeros(nat*3**nb, dtype=complex);
             ddRight = np.zeros(nat*3**nb, dtype=complex);   
             for i in range(nat):
-                ddRight[i*3**nb] = 1j*d10*np.exp(1j*kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
+                ddRight[i*3**nb] = 1j*d10*np.exp(-1j*kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
             
-            Sigma = np.zeros([nat*3**nb,nat*3**nb]);
-
-            
+            Sigma = np.zeros([nat*3**nb,nat*3**nb]);            
             for k in range(nsp):
                 
                 omega = deltaP[k]
@@ -206,9 +204,9 @@ class ensemble(object):
                 TF = np.zeros(nat*3**nb, dtype=complex)
                 TB = np.zeros(nat*3**nb, dtype=complex)
                 
-                for s in range(3):
+                for s in range(nat):
                     
-                    ddLeftF[s*3**nb] = -1j*d01*np.exp(-1j*kv*self.x0[0,s]*self.rr[0,s])*self.phib[s]
+                    ddLeftF[s*3**nb] = -1j*d01*np.exp(1j*kv*self.x0[0,s]*self.rr[0,s])*self.phib[s]
                     ddLeftB[s*3**nb] = -1j*d01*np.exp(-1j*kv*self.x0[0,s]*self.rr[0,s])*self.phib[s]
                     
                     TF[s*3**nb] =  2*np.pi*hbar*kv*c/Lz*Resolventa[s*3**nb]\
@@ -236,8 +234,14 @@ class ensemble(object):
             plt.title('Loss')
             plt.ylabel('$1-|r|^2-|t|^2$')
             
+            
             plt.show()
 
+            k = [1-self.Transmittance[i].real/(abs(self.Reflection)[i]**2\
+            +abs(self.Transmittance[i])**2) for i in range(nsp)]
+            plt.plot(deltaP,k)
+            plt.show()
+            
 
 """
 _____________________________________________________________________________
@@ -270,19 +274,19 @@ d1m0 = d01m;
 vg = 0.83375 #group velocity
 g = 1.06586;  #decay rate corrected in presence of a nanofiber, units of gamma 
 kv = 1.09629/lambd; #propogation constant (longitudial wavevector)
-wb = 1.5
+wb = 1.1
 
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 15; #number of atoms
+nat = 50; #number of atoms
 #if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
-Lz1 = lambd0 #minimized size between neighbours 
+Lz1 = 1.*lambd0 #minimized size between neighbours 
 Lz = 1.
 #frequency detuning scale 
 
-deltaP = np.arange(0, 2, 1)*gd
+deltaP = np.arange(-100, 100, 2)*gd
 nsp = len(deltaP);
 #V = nat/n0;   %quantization volume
 
@@ -294,15 +298,33 @@ ______________________________________________________________________________
 """
 
 chi = ensemble()
-chi.generate_ensemble('chain',dist = 0.1*lambd)
+chi.generate_ensemble('chain',dist = 0.1)
 chi.visualize()
 
-s = []
-for i in range(4,200):
-    nat = i
-    chi = ensemble()
-    chi.generate_ensemble('chain', dist = 0.1*lambd)
-    s.append(chi.Transmittance[0])
-from matplotlib import pyplot as plt
-plt.plot(range(4,200),s)
-plt.show()
+if True:
+    deltaP = np.arange(0, 1, 1)*gd
+    nsp = len(deltaP);
+    s = []
+    for i in range(4,100):
+        nat = i
+        chi = ensemble()
+        chi.generate_ensemble('chain', dist = 0.)
+        s.append(chi.Transmittance[0])
+    from matplotlib import pyplot as plt
+    k = [np.log(abs(i)) for i in s]
+    plt.plot(k)    
+    plt.show()
+
+if True:
+    deltaP = np.arange(0, 1, 1)*gd
+    nsp = len(deltaP);
+    s = []
+    for i in range(4,100):
+        nat = i
+        chi = ensemble()
+        chi.generate_ensemble('chain', dist = 0.1)
+        s.append(chi.Transmittance[0])
+    from matplotlib import pyplot as plt
+    k = [np.log(abs(i)) for i in s]
+    plt.plot(k)    
+    plt.show()
