@@ -214,7 +214,7 @@ class ensemble(object):
                     TB[s*3**nb] = 2*np.pi*hbar*kv*c/Lz*Resolventa[s*3**nb]\
                     *ddLeftF[s*3**nb]
                 self.Transmittance[k] = 1+(-1j/hbar*np.sum(TF)*(Lz/vg))
-                self.Reflection[k] = (-1j/hbar*np.sum(TF)*(Lz/vg))
+                self.Reflection[k] = (-1j/hbar*np.sum(TB)*(Lz/vg))
                 
         def visualize(self):
             import matplotlib.pyplot as plt
@@ -274,12 +274,12 @@ d1m0 = d01m;
 vg = 0.83375 #group velocity
 g = 1.06586;  #decay rate corrected in presence of a nanofiber, units of gamma 
 kv = 1.09629/lambd; #propogation constant (longitudial wavevector)
-wb = 1.1
+wb = 8.
 
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 50; #number of atoms
+nat = 100; #number of atoms
 #if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = 1.*lambd0 #minimized size between neighbours 
@@ -301,7 +301,7 @@ chi = ensemble()
 chi.generate_ensemble('chain',dist = 0.1)
 chi.visualize()
 
-if True:
+if False:
     deltaP = np.arange(0, 1, 1)*gd
     nsp = len(deltaP);
     s = []
@@ -315,7 +315,7 @@ if True:
     plt.plot(k)    
     plt.show()
 
-if True:
+if False:
     deltaP = np.arange(0, 1, 1)*gd
     nsp = len(deltaP);
     s = []
