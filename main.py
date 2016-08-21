@@ -73,9 +73,9 @@ class ensemble(object):
                 raise NameError('Ensemble type not found')
             
             if dist != .0:
-                x+= np.random.normal(0.0, dist*lambd, nat)
+                #x+= np.random.normal(0.0, dist*lambd, nat)
                 #y+= np.random.normal(0.0, dist*lambd, nat)
-                #z+= np.random.normal(0.0, dist*lambd, nat)
+                z+= np.random.normal(0.0, dist*lambd, nat)
                 
             
         
@@ -98,7 +98,7 @@ class ensemble(object):
             self.create_D_matrix()
             self.reflection_calc()
             
-            #print('Ensemble was generated for ',time()-t1,'s')
+            print('Ensemble was generated for ',time()-t1,'s')
             
             
         def create_D_matrix(self):
@@ -156,8 +156,7 @@ class ensemble(object):
                 for j in range(nat):
                     D3[i,j] = kv*(1/vg-1/c)*self.phib[i]*self.phib[j]*\
                     np.exp(1j*kv*self.x0[i,j]*self.rr[i,j])  
-                    
-                     
+                         
             Di = np.zeros([nat,nat,3,3], dtype = complex)
             for i in range(nat):
                 for j in range(nat):
@@ -237,12 +236,43 @@ class ensemble(object):
             
             plt.show()
 
-            k = [1-self.Transmittance[i].real/(abs(self.Reflection)[i]**2\
-            +abs(self.Transmittance[i])**2) for i in range(nsp)]
-            plt.plot(deltaP,k)
-            plt.show()
+            #k = [1-self.Transmittance[i].real/(abs(self.Reflection)[i]**2\
+            #+abs(self.Transmittance[i])**2) for i in range(nsp)]
+            #plt.plot(deltaP,k)
+            #plt.show()
             
 
+def plot_NRT(alpha = 0., num = 20):
+    global nat
+    global nsp
+    global DeltaP
+    deltaP = np.arange(0, 1, 1)*gd
+    nsp = len(deltaP);
+    r = []
+    t = []
+    for i in range(4,num):
+        nat = i
+        chi = ensemble()
+        chi.generate_ensemble('chain', dist = alpha)
+        t.append(chi.Transmittance[0])
+        r.append(chi.Reflection[0])
+    from matplotlib import pyplot as plt
+    
+    plt.subplots_adjust(hspace=0.1)
+    
+    axr = plt.subplot(211)
+    axr.plot([np.log(abs(i)**2) for i in r])
+    axr.set_ylabel('$ln(|r|^2)$')
+    axr.ticklabel_format(style='plain')
+    
+    axt = plt.subplot(212)
+    axt.plot([np.log(abs(i)**2) for i in t])
+    axt.set_ylabel('$ln(|t|^2)$')
+    axt.ticklabel_format(style='plain')
+    axt.set_xlabel('Number of atoms')
+    plt.show()
+
+    
 """
 _____________________________________________________________________________
 Declaring global variables
@@ -274,19 +304,19 @@ d1m0 = d01m;
 vg = 0.83375 #group velocity
 g = 1.06586;  #decay rate corrected in presence of a nanofiber, units of gamma 
 kv = 1.09629/lambd; #propogation constant (longitudial wavevector)
-wb = 8.
+wb = 1.
 
 #atomic ensemble properties
 
 n0 = 1*lambd**(-3); #density
-nat = 100; #number of atoms
+nat = 80; #number of atoms
 #if nat%2 == 1: nat+=1
 nb = 3;#number of neighbours
 Lz1 = 1.*lambd0 #minimized size between neighbours 
 Lz = 1.
 #frequency detuning scale 
 
-deltaP = np.arange(-100, 100, 2)*gd
+deltaP = np.arange(-40, 800, 1)*gd
 nsp = len(deltaP);
 #V = nat/n0;   %quantization volume
 
@@ -298,33 +328,8 @@ ______________________________________________________________________________
 """
 
 chi = ensemble()
-chi.generate_ensemble('chain',dist = 0.1)
+chi.generate_ensemble('chain',dist = 0.5)
 chi.visualize()
 
-if False:
-    deltaP = np.arange(0, 1, 1)*gd
-    nsp = len(deltaP);
-    s = []
-    for i in range(4,100):
-        nat = i
-        chi = ensemble()
-        chi.generate_ensemble('chain', dist = 0.)
-        s.append(chi.Transmittance[0])
-    from matplotlib import pyplot as plt
-    k = [np.log(abs(i)) for i in s]
-    plt.plot(k)    
-    plt.show()
-
-if False:
-    deltaP = np.arange(0, 1, 1)*gd
-    nsp = len(deltaP);
-    s = []
-    for i in range(4,100):
-        nat = i
-        chi = ensemble()
-        chi.generate_ensemble('chain', dist = 0.1)
-        s.append(chi.Transmittance[0])
-    from matplotlib import pyplot as plt
-    k = [np.log(abs(i)) for i in s]
-    plt.plot(k)    
-    plt.show()
+#plot_NRT(0.1, 25)
+#plot_NRT(0., 25)
