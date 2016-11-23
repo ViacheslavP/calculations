@@ -1,276 +1,379 @@
-# -*- coding: utf-8 -*-
-"""
-Created 23.07.16
-
-AS Sheremet's matlab code implementation 
-
-n = 1.45?
-
-UNSOLVED:
-Selection rules
-
-
-FUTURE:
-Random ensemble(? idk how to), 
-Use GPU for sparse matrix linsolve (inverse function could be rewritten on cuda
-in nopython flags)
-
-
-"""
-
-try:
-    import mkl
-    mkl.set_num_threads(mkl.get_max_threads())
-    mkl.service.set_num_threads(mkl.get_max_threads())
-except ImportError:
-    print('MKL does not installed. MKL dramatically improves calculation time')
-    
-    
-from scipy.sparse import linalg as alg
-from scipy.sparse import csr_matrix as csc
 import numpy as np
-from time import time
+from ens_class import ensemble, gd, nb, displacement, step      
+from matplotlib import rc, rcParams
+font = {'family' : 'serif',
+        'weight' : 'book',
+        'size'   : 12}
+rc('font', **font)
+rcParams.update({'figure.autolayout': True})
 
+def plot_NRT(alpha = 0., num = 20, env = 'fiber', addit = ''):
 
-def inverse(ResInv,ddRight):
-    return alg.spsolve(csc(ResInv),ddRight)
-
-class ensemble(object):
-    
-        """
-        Class of atom ensemble
-        """
-        def __init__(self):
-        
-            self.rr = np.array([[]])
-            self.phib = np.array([],dtype=complex)
-            self.xm = np.zeros([nat,nat],dtype=complex)
-            self.xp = np.array([[]],dtype=complex)
-            self.x0 = np.array([[]],dtype=complex)
-            self.index = np.array([[]])
-            self.D = np.zeros([nat*3**nb,nat*3**nb],dtype=complex)
-            #self.CrSec = np.zeros(nsp);
-            self.Transmittance = np.zeros(nsp,dtype=complex);
-            self.Reflection = np.zeros(nsp,dtype=complex);
-            self._foo = [[[]]]
-        def generate_ensemble(self, s='chain', dist = .0):
-    
-            """
-            Method generates enseble for current atomic ensemble properties and
-            finds requested number of neighbours
-            Yet it is a linear ensemble
-            """  
-            if s=='chain':
-                x = 1.5*a*np.ones(nat)
-                y = 0.*np.ones(nat)
-                z = np.arange(nat)*Lz1
-            elif s=='doublechain':
-                x = 1.5*a*np.asarray([np.sign(i - nat/2) for i in range(nat)])
-                y = 0.*np.ones(nat)
-                goo = [i for i in range(nat//2)]
-                z = np.asarray(goo+goo)*1.
-            else:
-                raise NameError('Ensemble type not found')
-            
-            if dist != .0:
-                #x+= np.random.normal(0.0, dist*lambd, nat)
-                #y+= np.random.normal(0.0, dist*lambd, nat)
-                z+= np.random.normal(0.0, dist*lambd, nat)
-                
-            
-        
-            t1 = time()
-            
-            self.phib = 1/np.sqrt(2*np.pi*wb**2)*np.exp(((x)**2+y**2)/2/wb/wb)        
-            
-            self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
-            -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
-            self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)
-        
-            self.xp = -np.asarray([[((x[i]-x[j])+1j*(y[i]-y[j]))/(self.rr[i,j]+ \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)
-        
-            self.x0 = np.asarray([[(z[i]-z[j])/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)],dtype=complex)
-            
-            self.index = np.argsort(self.rr)[:,1:nb+1]
-            self.create_D_matrix()
-            self.reflection_calc()
-            
-            print('Ensemble was generated for ',time()-t1,'s')
-            
-            
-        def create_D_matrix(self):
-            """
-            Method creates st-matrix, then creates D matrix and reshapes D 
-            matrix into 1+1 matrix with respect to selection rules
-            
-
-            
-            We consider situation when the atom interacts just with some neighbours.
-            It's mean that we should consider St-matrix only for this neighbours. For
-            all other atoms we consider only self-interaction and elements of
-            St-matrix would be the same for this elements.
-            0 - atom is in state with m = -1,
-            1 - atom is in state with m = 0,
-            2 - atom is in state with m = 1. We assume that it t=0 all atoms in state
-            with m = 1.
-            """
-            from itertools import product as combi
-            state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
-            
-            st = np.ones([nat,nat,3**nb], dtype = int)*2
-            for n1 in range(nat):
-                k=0
-                for n2 in self.index[n1,:]:
-                    for i in range(3**nb):
-                        st[n1,n2,i] = state[i,k]
-                    k+=1  
-            """
-            condition of selection for nb = 3
-            st[n1,:,i] = [... 2, i0, 2(n1'th position) ,i1(n2'th position), i2   3...] 
-            st[n2,:,j] = [... 2, 2, j0(n1'th position), 2(n2'th position),  j1, j2 ..]
-            
-            ik = state[i,k]
-            
-            the condition of transition from i to j is j1 = i2, j2 = 3 
-            (we exclude n1't and n2'th positions)
-            """
-
-            def foo(ni1,nj2,i,j):
-
-                for k1 in range(nat):
-                    if k1 == ni1 or k1 == nj2: continue;
-                    if (st[ni1,k1,i] != st[nj2,k1,j]):
-                        return False
-                return True
-                
-                
-            D1 = hbar*kv*((1 - 1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
-            np.identity(nat))**3)*np.exp(-1j*self.rr))*(np.ones(nat)-np.identity(nat)))   
-            D2 = -hbar*kv*((3 - 3*1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
-            lambd*np.identity(nat))**3))*np.exp(1j*self.rr))
-            D3 = np.zeros([nat,nat], dtype=complex)            
-            for i in range(nat):
-                for j in range(nat):
-                    D3[i,j] = kv*(1/vg-1/c)*self.phib[i]*self.phib[j]*\
-                    np.exp(1j*kv*self.x0[i,j]*self.rr[i,j])  
-                         
-            Di = np.zeros([nat,nat,3,3], dtype = complex)
-            for i in range(nat):
-                for j in range(nat):
-                    
-                    Di[i,j,0,0] = d01m*d1m0*(D1[i,j] - self.xp[i,j]*self.xm[i,j]*D2[i,j]+D3[i,j]);
-                    Di[i,j,0,1] = d01m*d00*(-self.xp[i,j]*self.x0[i,j]*D2[i,j]);
-                    Di[i,j,0,2] = d01m*d10*(-self.xp[i,j]*self.xp[i,j]*D2[i,j]);
-                    Di[i,j,1,0] = d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j]);
-                    Di[i,j,1,1] = d00*d00*(D1[i,j] + self.x0[i,j]*self.x0[i,j]*D2[i,j]+D3[i,j]); 
-                    Di[i,j,1,2] = d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j]);
-                    Di[i,j,2,0] = d01*d1m0*(-self.xm[i,j]*self.xm[i,j]*D2[i,j]);
-                    Di[i,j,2,1] = d01*d00*(-self.xm[i,j]*self.x0[i,j]*D2[i,j]);
-                    Di[i,j,2,2] = d01*d10*(D1[i,j] - self.xm[i,j]*self.xp[i,j]*D2[i,j]);
-                          
-            for n1 in range(nat):       #choose excited atom
-                for i in range(3**nb):  #select excited atom environment
-                    k = 0               #count number of neighbour
-                    for n2 in self.index[n1,:]:    #choose neighbour
-                       for j in range(3**nb):      #select neighbour environment
-                            if foo(n1,n2,i,j):     #if transition is possible then make assigment
-                       
-                                self.D[n1*3**nb+i,n2*3**nb+j] = \
-                                Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
-                       k+=1
-            
-        def reflection_calc(self):
-            
-            ddLeftF = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB = np.zeros(nat*3**nb, dtype=complex);
-            ddRight = np.zeros(nat*3**nb, dtype=complex);   
-            for i in range(nat):
-                ddRight[i*3**nb] = 1j*d10*np.exp(-1j*kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
-            
-            Sigma = np.zeros([nat*3**nb,nat*3**nb]);            
-            for k in range(nsp):
-                
-                omega = deltaP[k]
-                Sigma = np.identity(nat*3**nb)*(omega+1j*nat*g/2)
-                
-                ResInv = Sigma - self.D*kv*kv/hbar
-                Resolventa = np.zeros(nat*nb**3)
-                Resolventa =  inverse(ResInv,ddRight)
-                
-                TF = np.zeros(nat*3**nb, dtype=complex)
-                TB = np.zeros(nat*3**nb, dtype=complex)
-                
-                for s in range(nat):
-                    
-                    ddLeftF[s*3**nb] = -1j*d01*np.exp(1j*kv*self.x0[0,s]*self.rr[0,s])*self.phib[s]
-                    ddLeftB[s*3**nb] = -1j*d01*np.exp(-1j*kv*self.x0[0,s]*self.rr[0,s])*self.phib[s]
-                    
-                    TF[s*3**nb] =  2*np.pi*hbar*kv*c/Lz*Resolventa[s*3**nb]\
-                    *ddLeftF[s*3**nb]
-                    TB[s*3**nb] = 2*np.pi*hbar*kv*c/Lz*Resolventa[s*3**nb]\
-                    *ddLeftF[s*3**nb]
-                self.Transmittance[k] = 1+(-1j/hbar*np.sum(TF)*(Lz/vg))
-                self.Reflection[k] = (-1j/hbar*np.sum(TB)*(Lz/vg))
-                
-        def visualize(self):
-            import matplotlib.pyplot as plt
-            plt.subplot(1,3,1)            
-            plt.plot(deltaP,(abs(self.Reflection)**2 ), 'r-')
-            plt.title('Reflection')
-            plt.ylabel('$|r|^2$')
-            
-            plt.subplot(1,3,2) 
-            plt.plot(deltaP, abs(self.Transmittance)**2, 'm-')
-            plt.title('Transmittance')
-            plt.ylabel('$|t|^2$')
-            
-            plt.subplot(1,3,3)
-            plt.plot(deltaP, np.ones(nsp)-(abs(self.Reflection)**2\
-            +abs(self.Transmittance)**2), 'g-')
-            plt.title('Loss')
-            plt.ylabel('$1-|r|^2-|t|^2$')
-            
-            
-            plt.show()
-
-            #k = [1-self.Transmittance[i].real/(abs(self.Reflection)[i]**2\
-            #+abs(self.Transmittance[i])**2) for i in range(nsp)]
-            #plt.plot(deltaP,k)
-            #plt.show()
-            
-
-def plot_NRT(alpha = 0., num = 20):
-    global nat
-    global nsp
-    global DeltaP
-    deltaP = np.arange(0, 1, 1)*gd
+    deltaP = np.arange(-1, 1, 0.01)*gd
     nsp = len(deltaP);
     r = []
     t = []
-    for i in range(4,num):
-        nat = i
-        chi = ensemble()
-        chi.generate_ensemble('chain', dist = alpha)
+    x= range(5,num,1)
+    for i in x:
+        chi = ensemble(env,'chain',dist = alpha,d=5.5)
+        chi.generate_ensemble()
         t.append(chi.Transmittance[0])
         r.append(chi.Reflection[0])
     from matplotlib import pyplot as plt
     
-    plt.subplots_adjust(hspace=0.1)
+    if chi._env == 'fiber' :
+        s = '$Beam\, waist = %g \lambda,\,  \lambda ,\, Fiber\, ON$' % (alpha)
+    elif chi._env == 'vacuum':
+        s = '$Beam\, waist = %g \lambda,\, \lambda, \, Fiber\, OFF$' % (alpha)
+    else:
+        raise NameError('Got problem with fiber')
+    plt.subplots(figsize=(10,7))
+    plt.subplots_adjust(hspace=0.5)
+    plt.suptitle(s)
     
     axr = plt.subplot(211)
-    axr.plot([np.log(abs(i)**2) for i in r])
-    axr.set_ylabel('$ln(|r|^2)$')
+    axr.plot(x,[(abs(i)**2) for i in r])
+    axr.set_ylabel('$(|r|^2)$')
     axr.ticklabel_format(style='plain')
     
     axt = plt.subplot(212)
-    axt.plot([np.log(abs(i)**2) for i in t])
-    axt.set_ylabel('$ln(|t|^2)$')
+    axt.plot(x,[abs(i)**2 for i in t])
+    axt.set_ylabel('$(|t|^2)$')
     axt.ticklabel_format(style='plain')
     axt.set_xlabel('Number of atoms')
+    plt.savefig(("RTN_%g_%s" % (alpha,chi._env))+addit+'.png')
     plt.show()
+
+def plot_Bragg(st,to,N=5,neighbours=4,condition='chain',disp=0.):
+    from matplotlib import pyplot as plt
+    dK = np.linspace(st,to,120)*2*np.pi
+    t = [];r = []
+    for dk in dK:
+        chi = ensemble(N,
+                       neighbours,
+                       'fiber',
+                       condition,
+                       dist = disp,
+                       d=1.5,
+                       l0=dk,
+                       deltaP=np.linspace(-1,1,100)
+                       )
+               
+        chi.generate_ensemble()
+        t.append(np.max(abs(chi.Transmittance)))
+        r.append(np.max(abs(chi.Reflection)))
+        
+    m =ensemble(N,
+                       neighbours,
+                       'fiber',
+                       condition,
+                       dist = disp,
+                       d=1.5,
+                       l0=2*np.pi/1.09518,
+                       deltaP=np.linspace(-10,10,100))
+    m.generate_ensemble()
+                   
+    f, (ax, ax2) = plt.subplots(2, 1, sharex=True)
+    ax.plot(dK / 2 / np.pi, [(i**2) for i in t], color = 'g', lw = 1.5, label = 'Transmittance')
+    ax.plot(dK / 2 / np.pi, [(i**2) for i in r], color = 'm', lw = 1.5,label = 'Reflectance')
+    ax.legend(frameon=False)
+    #ax2.plot(dK / 2 / np.pi, [(i**2) for i in t], color = 'g', lw = 1.5, label = 'Transmittance')
+    ax2.plot(dK / 2 / np.pi, [(i**2) for i in r], color = 'm', lw = 1.5,label = 'Reflection')
+    ax.set_ylim(.83, 0.9)  # outliers only
+    ax2.set_ylim(0, .29)  # most of the data
+
+    
+    ax.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax.xaxis.tick_top()
+    ax.tick_params(labeltop='off')  # don't put tick labels at the top
+    ax2.xaxis.tick_bottom()
+
+
+    d = .015  # how big to make the diagonal lines in axes coordinates
+
+    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+    ax.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+    ax.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+    ax.set_ylabel('$T$')
+    ax2.set_ylabel('$R$')
+    plt.xlabel('$d/ \lambda$',fontsize=16)
+    plt.savefig('cascade.svg')
+    plt.show()
+
+
+   
+def plot_Bragg_family(st,to,N=5,neighbours=4,condition='chain',disp=0.,ty='L'):
+        
+    from matplotlib import pyplot as plt
+    P = np.linspace(st,to,120)
+    beta = 1.0951842440279331
+    e = ensemble(N,
+                   neighbours,
+                   'fiber',
+                   condition,
+                   dist = disp,
+                   d=1.5,
+                   l0=(1)*np.pi / beta,
+                   deltaP=P,
+                   typ=ty)
+    m1 = ensemble(N,
+                   neighbours,
+                   'fiber',
+                   condition,
+                   dist = disp,
+                   d=1.5,
+                   l0=(1-0.05)*np.pi / beta,
+                   deltaP=P,
+                   typ=ty)
+    m2 = ensemble(N,
+                   neighbours,
+                   'fiber',
+                   condition,
+                   dist = disp,
+                   d=1.5,
+                   l0=(1-0.075)*np.pi / beta,
+                   deltaP=P,
+                   typ=ty)
+    p1 = ensemble(N,
+                   neighbours,
+                   'fiber',
+                   condition,
+                   dist = disp,
+                   d=1.5,
+                   l0=(1+0.05)*np.pi / beta,
+                   deltaP=P,
+                   typ=ty)
+    p2 = ensemble(N,
+                   neighbours,
+                   'fiber',
+                   condition,
+                   dist = disp,
+                   d=1.5,
+                   l0=(1+0.075)*np.pi / beta,
+                   deltaP=P,
+                   typ=ty)
+                   
+    e.generate_ensemble()
+    m1.generate_ensemble()
+    m2.generate_ensemble()
+    p1.generate_ensemble()
+    p2.generate_ensemble()
+    
+    
+    plt.title('Reflection spectra', fontsize = 16)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('Reflectance', fontsize=16)
+    plt.plot(P,(abs(e.Reflection)**2), color = 'k', lw=2., label = "$\Delta \lambda_m = 0$")
+    
+    plt.plot(P,(abs(m1.Reflection)**2),color = 'b', lw = 1.2, label = '$\Delta \lambda_m = -0.05 \lambda_m$')
+    plt.plot(P,(abs(p1.Reflection)**2),color = 'r', lw = 1.2,  label = '$\Delta \lambda_m = 0.05 \lambda_m$')
+    
+    plt.plot(P,(abs(m2.Reflection)**2),color = 'g',lw = 1.2, label = '$\Delta \lambda_m = -0.075 \lambda_m$')    
+    plt.plot(P,(abs(p2.Reflection)**2),color = 'm',lw = 1.2, label = '$\Delta \lambda_m = 0.075 \lambda_m$')
+    
+    plt.axvline(x=0, ymin=0.06,color='k',ls='dashed',label='Atomic \n resonance \n frequency')   
+    plt.legend(frameon=False,bbox_to_anchor=(0.50, 0.95), loc=2, borderaxespad=0.)
+    plt.tight_layout()
+    plt.subplots_adjust(right= 0.7)
+    plt.savefig('RefBragg.svg',dpi=300)
+    plt.show()
+    
+    
+    plt.title('Transmission spectra', fontsize = 16)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('Transmittance', fontsize=16)
+    plt.plot(P,(abs(e.Transmittance)**2), color = 'k',  lw=2.5, label = "$\Delta \lambda_m = 0$")
+    
+    #plt.plot(P,(abs(m1.Transmittance)**2),color = 'b', lw = 1.2, label = '$\Delta \lambda = -0.05 \lambda$')
+    #plt.plot(P,(abs(p1.Transmittance)**2),color = 'r', lw = 1.2,  label = '$\Delta \lambda = 0.05 \lambda$')
+    
+    plt.plot(P,(abs(m2.Transmittance)**2),color = 'g',lw = 1.5, label = '$\Delta \lambda_m = -0.075 \lambda_m$')    
+    plt.plot(P,(abs(p2.Transmittance)**2),color = 'm',lw = 1.5, label = '$\Delta \lambda_m = 0.075 \lambda_m$')
+    
+    plt.axvline(x=0, ymin=0.06, ymax=1.,color='k',ls='dashed',label='Atomic \n resonance \n frequency')   
+    plt.legend(frameon=False,bbox_to_anchor=(0.55, 0.7), loc=2, borderaxespad=0.)
+    plt.tight_layout()
+    plt.subplots_adjust(right= 0.7)
+    plt.savefig('TranBragg.svg',dpi=300)    
+    plt.show()
+    
+
+def plot_O_vs_DO(st,to, N=5,neighbours=4,condition='chain'):
+    from matplotlib import pyplot as plt
+    freq = np.linspace(st,to,100)
+    la = ensemble(N,
+                   neighbours,
+                   'fiber', #Stands for cross-section calculation(vacuum) or 
+                             #transition calculations (fiber) 
+                   'chain',  #Stands for atom positioning
+                   dist = 0.,
+                   d=1.5,
+                   l0=step,
+                   deltaP=freq,
+                   typ = 'L',
+                   dens=1.)
+                   
+    lb = ensemble(N,
+                   neighbours,
+                   'fiber', #Stands for cross-section calculation(vacuum) or 
+                             #transition calculations (fiber) 
+                   'chain',  #Stands for atom positioning
+                   dist = 0.1*2*np.pi,
+                   d=1.5,
+                   l0=step,
+                   deltaP=freq,
+                   typ = 'L',
+                   dens=1.)
+                   
+                
+                   
+    la.generate_ensemble()
+    lb.generate_ensemble()
+    
+    plt.plot(freq,(np.log(abs(la.Reflection)**2)), color = 'k', lw=2., label = "$\Delta \lambda = 0$")
+    plt.plot(freq,(np.log(abs(lb.Reflection)**2)), color = 'b', lw=2., label = "$\Delta \lambda = 0$")
+     
+    plt.show()
+    
+    plt.title('Reflection spectra', fontsize = 16)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('ln Reflectance', fontsize=16)
+    plt.plot(freq,np.log(abs(la.Reflection)**2), color = 'g', lw=1.2, label = "$\sigma = 0 \lambda$")
+    
+    plt.plot(freq,np.log(abs(lb.Reflection)**2),color = 'm', lw = 1.2, label = '$\sigma = 0.1 \lambda$')
+    
+    plt.axvline(x=0, ymin=0.06,color='k',ls='dashed',label='Atomic \n resonance \n frequency')   
+    plt.legend(frameon=False,bbox_to_anchor=(0.55, 1.00), loc=2, borderaxespad=0.)
+    plt.tight_layout()
+    plt.subplots_adjust(right= 0.7)
+    plt.savefig('RefOvs.svg',dpi=300)
+    plt.show()
+    
+    
+    plt.title('Transmission spectra', fontsize = 16)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('ln Transmittance', fontsize=16)
+   
+    
+    plt.plot(freq,np.log(abs(la.Transmittance)**2), color = 'g', lw=1.5, label = "$\sigma = 0 \lambda$")
+    
+    plt.plot(freq,np.log(abs(lb.Transmittance)**2),color = 'm', lw = 1.5, label = '$\sigma = 0.1 \lambda$')
+    
+    plt.axvline(x=0, ymin=0.06, ymax=1.,color='k',ls='dashed',label='Atomic \n resonance \n frequency')   
+    plt.legend(frameon=False,bbox_to_anchor=(0.55, 0.7), loc=2, borderaxespad=0.)
+    plt.tight_layout()
+    plt.subplots_adjust(right= 0.7)
+    plt.savefig('TranOvs.svg',dpi=300)    
+    plt.show()
+                   
+                   
+def plot_V_vs_L(st,to,N=4,neighbours=3,condition='chain',disp=0.):
+    from matplotlib import pyplot as plt
+    P = np.linspace(st,to,120)
+    eL = ensemble(N,
+                neighbours,
+                'fiber',
+                condition,
+                dist = disp,
+                d=1.5,
+                l0=2*np.pi/1.0,
+                deltaP=P,
+                typ='L')
+    eV = ensemble(N,
+                neighbours,
+                'fiber',
+                condition,
+                dist = disp,
+                d=1.5,
+                l0=2*np.pi/1.0,
+                deltaP=P,
+                typ='V')
+                
+    eL.generate_ensemble()
+    eV.generate_ensemble()
+    
+    plt.title('Reflection spectra', fontsize = 16)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('Reflectance', fontsize=16)
+    
+    
+    plt.plot(P,(abs(eL.Reflection)**2),color = 'b', lw = 1.2, label = '$\Lambda$')
+    plt.plot(P,(abs(eV.Reflection)**2),color = 'r', lw = 1.2,  label = '$V$')
+    
+    
+    plt.axvline(x=0, ymin=-16,color='k',ls='dashed',label='Atomic \n resonance \n frequency')   
+    plt.legend(frameon=False,bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.tight_layout()
+    plt.subplots_adjust(right= 0.7)
+    plt.savefig('RefBragg.svg',dpi=300)
+    plt.show()
+    
+def plot_Lamb_Shift(start,stop,N=5,neighbours=4,condition='chain',disp=0.):
+    
+    from matplotlib import pyplot as plt
+    dK = np.linspace(start,stop,240)
+    dP = np.linspace(-4,4,70)
+    
+    rm = []
+    for k in dK:
+        
+        e = ensemble(N,
+                     neighbours,
+                     'fiber',
+                     condition,
+                     dist = 0.,
+                     d=1.5,
+                     l0=k,
+                     deltaP=dP)
+        e.generate_ensemble()        
+        rm.append(dP[np.argmax(abs(e.Reflection)**2)])
+        
+        
+    plt.plot(dK,rm,'r',lw=2)
+    plt.xlabel('Step, '+'$ \lambda$',fontsize=16)
+    plt.ylabel('Collective Lamb Shift, '+ '$\Delta_{CL}, \gamma$',fontsize=16)
+    plt.savefig('Lamb.svg')
+    plt.show()
+        
+        
+                     
+def AverageCrsc(eps=1e-2, na=5, dens=0.5, N=20,freq = np.linspace(-15,15,200)):
+    
+
+    ACrSec = np.zeros(len(freq))
+    W=0
+    for i in range(N):
+        
+        chi = ensemble(na,
+               na-1,
+               'vacuum',
+               'chain',
+               dist = displacement,
+               d=1.5,
+               l0=step,
+               deltaP=freq,
+               typ = 'L',
+               dens = dens)
+               
+        chi.generate_ensemble()
+        wi = 1 
+        ACrSec += wi*np.real(chi.CrSec) 
+        W += wi
+        chi.vis_crsec()        
+        
+    import matplotlib.pyplot as plt
+    plt.plot(freq, ACrSec/W, 'b', lw =2.)
+    plt.xlabel('Detuning, '+'$\gamma$', fontsize=16)
+    plt.ylabel('$ \sigma  $', fontsize=16)
+    plt.savefig('Average %g.png' % dens)
+    plt.show()
+    freq[np.argmax(ACrSec)]
+    return ACrSec/W
 
     
 """
@@ -278,58 +381,114 @@ _____________________________________________________________________________
 Declaring global variables
 _____________________________________________________________________________
 
-"""
+System of units:
 
-#scale constants
-
-
-hbar = 1 #dirac's constant
-c = 1 #speed of light
-gd = 1; #decay rate in vacuum
-lambd = 1; #atomic wavelength (lambda=lambda/(2*pi))
-lambd0 = lambd/2; #period of atomic chain
-a = 200/780*lambd; #nanofiber radius in units of Rb wavelength
-
-
-#dipole moments (?)
-
-d01 = np.sqrt(hbar*gd/4*(lambd**3));  #|F = 0, n = 0> <- |F0 = 1> - populated level 
-d10 = d01;
-d00 = np.sqrt(hbar*gd/4*lambd**3);
-d01m = np.sqrt(hbar*gd/4*lambd**3);
-d1m0 = d01m;
-
-#waveguide properties that could be computed in present scale
-
-vg = 0.83375 #group velocity
-g = 1.06586;  #decay rate corrected in presence of a nanofiber, units of gamma 
-kv = 1.09629/lambd; #propogation constant (longitudial wavevector)
-wb = 1.
-
-#atomic ensemble properties
-
-n0 = 1*lambd**(-3); #density
-nat = 80; #number of atoms
-#if nat%2 == 1: nat+=1
-nb = 3;#number of neighbours
-Lz1 = 1.*lambd0 #minimized size between neighbours 
-Lz = 1.
-#frequency detuning scale 
-
-deltaP = np.arange(-40, 800, 1)*gd
-nsp = len(deltaP);
-#V = nat/n0;   %quantization volume
-
+Distance is measured in \lambdabar (lambd)
+Time is measured in 1/ {\gamma} (g)
+Speed of light is the only scale constant: c = lambd * g  = g / omega = T/ {\tau}
+IDK what \hbar is for.
 
 """
-______________________________________________________________________________
-Executing program
-______________________________________________________________________________
+
+
+#chi.visualize()
+
+
+#plot_Bragg_family(-2,2)
+
+"""
+m = exact_mode(1,1.45,1)
+m.generate_mode()
+ha = m._ha
+qa = m._qa
+s = m._s
+
+k = qa/ha * (((1-s)*j0(ha)-(1+s)*jn(2,ha))/((1-s)*k0(qa)+(1+s)*kn(2,qa)))*(k1(qa)/j1(ha)) - 1/n0/n0
+k12 = qa/ha * (((1-s)*j0(ha)+(1+s)*jn(2,ha))/((1-s)*k0(qa)-(1+s)*kn(2,qa)))*(k1(qa)/j1(ha))
+
+print(k,k12)
+
 """
 
-chi = ensemble()
-chi.generate_ensemble('chain',dist = 0.5)
+"""
+d = []
+nf = [1.30,1.35,1.40,1.45,1.50,1.55,1.60,1.65,1.70]
+for i in nf:
+    m = exact_mode(2*np.pi,i)
+    d.append(m.wb)
+
+n = 1.45
+
+import matplotlib.pyplot as plt
+m = exact_mode(c/lambd*2*np.pi,1.45, 1.)
+m.generate_mode()
+
+cx = np.vectorize(m.cx)
+cy = np.vectorize(m.cy)
+
+y = np.arange(-3*a,3*a,0.4*a)
+x = np.arange(-3*a,3*a,0.4*a)
+
+X,Y = np.meshgrid(x,y)
+U = cx(X,Y).real
+W = cy(X,Y).real
+plt.quiver(X,Y,U,W)
+plt.show()
+
+phi = np.linspace(0,2*np.pi,100)
+plt.polar(phi, ex(1.5*a,phi,0))
+plt.polar(phi, ey(1.5*a,phi,0)) 
+plt.show()
+si = t[0]
+x = np.arange(0, a*5, 0.01)
+f = lambda y: (1/np.sqrt(np.pi*si**2)*np.exp(-y**2/si**2/2))
+g = [f(i) for i in x]
+plt.plot(x,ey(x),'m')
+plt.plot(x,g)
+plt.plot(x,ez(x), 'r')
+plt.show()
+
+wb = t[0]
+chi = ensemble('fiber','chain',dist=displacement)
+chi.generate_ensemble()
 chi.visualize()
 
-#plot_NRT(0.1, 25)
-#plot_NRT(0., 25)
+"""
+"""
+if __name__ == "__main__":
+
+    t1 = time()
+
+    deltaP = np.arange(-15, 20.1, 0.1)*gd
+    nsp = len(deltaP);    
+    
+    wb = 4.
+    chi = ensemble('vacuum','chain',dist = displacement)
+    chi.generate_ensemble()
+    chi.visualize()
+    
+    wb = 25.
+    chi = ensemble('vacuum','chain',dist = displacement)
+    chi.generate_ensemble()
+    chi.visualize()
+    
+    wb = 50.
+    chi = ensemble('vacuum','chain',dist = displacement)
+    chi.generate_ensemble()
+    chi.visualize()
+    
+    del chi
+    
+    wb = 4.
+    vac = ensemble('vacuum','chain',0.); vac.generate_ensemble(); vac.visualize('unitarity')
+    fib = ensemble('fiber','chain',0.); fib.generate_ensemble(); fib.visualize('unitarity')
+     
+    del vac,fib
+    wb = 50.
+    plot_NRT(5., 200, env = 'vacuum')
+    plot_NRT(0., 200, env = 'vacuum')
+    
+    print('Executed for ', (time()-t1)/60, 'm')
+    
+"""
+
