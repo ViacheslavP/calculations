@@ -1,30 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Oct 28 18:47:05 2016
-
 @author: viacheslav
 """
 
 # -*- coding: utf-8 -*-
 """
 Created 23.07.16
-
 AS Sheremet's matlab code implementation 
-
 n = 1.45 - the case that we only need to calculate
 n = 1.1 - the other case
-
 UNSOLVED:
 |t|^2 ~ N^2 (as N->inf)
-
-
 FUTURE:
 V - atom (Self-Energy part needs to be modified)
-
-
-
-
-
 """
 
 try:
@@ -259,7 +247,6 @@ class ensemble(object):
             Method creates st-matrix, then creates D matrix and reshapes D 
             matrix into 1+1 matrix with respect to selection rules
             
-
             
             We consider situation when the atom interacts just with some neighbours.
             It's mean that we should consider St-matrix only for this neighbours. For
@@ -297,17 +284,17 @@ class ensemble(object):
                 return True
                 
                 
-            D1 = ((1 - 1j*self.rr - self.rr**2)/ \
+            D1 = 0*((1 - 1j*self.rr - self.rr**2)/ \
                 ((self.rr + np.identity(nat))**3) \
                 *np.exp(1j*self.rr)) *(np.ones(nat)-np.identity(nat))   / kv/kv
-            D2 = -hbar*kv*((3 - 3*1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
+            D2 = 0*-hbar*kv*((3 - 3*1j*self.rr - self.rr**2)/(((kv**3)*(self.rr+\
             lambd*np.identity(nat))**3))*np.exp(1j*self.rr))
             
             D3 = np.zeros([nat,nat], dtype=complex)            
             for i in range(nat):
                 for j in range(nat):
-                    D3[i,j] =-2*np.pi*1j* kv*(1/self.vg-1/c)*self.phib[i]*self.phib[j]*\
-                    np.exp(1j*kv*self.x0[i,j]*self.rr[i,j]) #waveguide correction
+                    D3[i,j] = - 2*np.pi*1j* kv*(1/self.vg)*self.phib[i]*self.phib[j]*\
+                    np.exp(1j*self.kv*abs(self.x0[i,j])*self.rr[i,j]) #waveguide correction
                     if i==j: D3[i,j] = 0;
             if self._env == 'vacuum' or self._env == 'no correction':
                     D3 = np.zeros([nat,nat], dtype=complex) 
@@ -378,7 +365,7 @@ class ensemble(object):
             k=1
             
             if self._env == 'fiber':
-                gd = 1+8*np.pi*k*(1/self.vg-1/c)*self.phib*self.phib*d00*d00
+                gd = 1+3*8*np.pi*k*(1/self.vg)*self.phib*self.phib*d00*d00
             
             if self.typ == 'L':
                 
@@ -406,8 +393,14 @@ class ensemble(object):
                     ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
                     ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
                     ddLeftB[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phib[i]
+                    
+                    #Paraxial approx. modify only decay in states with m = +|- 1
                     for j in range(3):
-                        Sigmad[(i)*3+j,(i)*3+j] =0.5* gd[i]*0.5j #distance dependance of dacay rate
+                        if j == 1:
+                            Sigmad[(i)*3+j,(i)*3+j] = 1*0.5j
+                            
+                        
+                        Sigmad[(i)*3+j,(i)*3+j] =(1+0.5* (gd[i]-1))*0.5j #distance dependance of dacay rate
 
             for k in range(len(self.deltaP)):
                 
@@ -555,8 +548,8 @@ c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
 gd = 1.; #vacuum decay rate The only 
 lambd = 1; # atomic wavelength (lambdabar)
 k = 1/lambd
-lambd0 = 1.*np.pi / 1.09; # period of atomic chain
-a = 2*np.pi*200/780*lambd; # nanofiber radius in units of Rb wavelength
+lambd0 = 1.*np.pi / 1.0951842440279331; # period of atomic chain
+a = 2*np.pi*200/850*lambd; # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica) 
 
 
@@ -574,9 +567,9 @@ d1m0 = d01m;
 
 freq = np.arange(-15, 20.1, 0.1)*gd
 step = lambd0
-nat = 50 #number of atoms
+nat = 200 #number of atoms
 nb = 3 #number of neighbours in raman chanel
-displacement = 0.5*2*np.pi#1.5
+displacement = 0#.5*2*np.pi#1.5
 
 """
 ______________________________________________________________________________
@@ -590,15 +583,15 @@ if __name__ == '__main__':
                    nb,    #number of neighbours in raman chanel
                    'fiber', #Stands for cross-section calculation(vacuum) or 
                              #transition calculations (fiber) 
-                   'nocorrchain',  #Stands for atom positioning : chain, nocorrchain and doublechain
+                   'chain',  #Stands for atom positioning : chain, nocorrchain and doublechain
                    dist = displacement, # sigma for displacement
                    d=1.5, # distance from fiber
                    l0=step, # mean distance between atoms
                    deltaP=freq, # array of freq.
-                   typ = 'L', # L or V for Lambda and V atom resp.
+                   typ = 'V', # L or V for Lambda and V atom resp.
                    dens=1. # mean density for x-section calculations
                    )
                
     chi.generate_ensemble()
     chi.visualize() # use for refl and trans visualisation
-    #chi.vis_crsec() #use for xsec. visualisation
+#chi.vis_crsec() #use for xsec. visualisation
