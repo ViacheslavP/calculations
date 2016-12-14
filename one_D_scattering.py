@@ -506,9 +506,7 @@ d1m0 = d01m;
 
 freq = np.linspace(-30, 35.1, 100)*gd
 step = lambd0
-nat = 340#number of atoms
-nb =  3#number of neighbours in raman chanel
-displacement = 0#.1*2*np.pi#1.5
+
 
 """
 ______________________________________________________________________________
