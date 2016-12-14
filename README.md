@@ -1,8 +1,8 @@
-# no readme
 
-fundamental_mode.py - the fundamental mode calculation. Once you run ens_class.py it will calculate group velocity, propogagation constant and waist (OLS) and write it in the file.  
 
-ens_class.py (prev. main.py) contains atom positioning (chain, doublechain, nocorrchain, all random in xsect. calculation) and scattering problems (xsect. and coefficients). 
+bmode.py - the fundamental mode calculation. It calculates the fundamental mode components and fundamental mode properties (group velocity, propagation constant etc.) 
 
-main.py - visualization procedures (uses ens_class.py)
+one_D_scattering.py (prev. main.py) contains atom positioning (chain, doublechain, nocorrchain) and scattering problem (coefficients only). 
+
+Both files are needed!
 
