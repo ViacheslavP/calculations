@@ -22,7 +22,7 @@ n = 1.45 - the case that we only need to calculate
 n = 1.1 - the other case
 
 UNSOLVED:
-|t|^2 ~ N^2 (as N->inf)
+|t|^2 ~ N^2 (as N->inf and as vacuum prop is on)
 
 
 FUTURE:
@@ -44,8 +44,7 @@ except ImportError:
     
 from scipy.sparse import linalg as alg
 from scipy.sparse import csr_matrix as csc
-from scipy.sparse import lil_matrix as lm
-from scipy.sparse import lil
+
 
 import numpy as np
 from time import time
@@ -128,6 +127,7 @@ class ensemble(object):
             nat=self.nat
             s = self._s
             dist = self._dist
+            nb = self.nb
             
 
             if s=='chain':
@@ -256,7 +256,6 @@ class ensemble(object):
                     neigh[i,j] = foo2(self.rr[i,j])
 
             kv = 1
-            zr = self.wb**2
             
             D1 = 0*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
                 ((self.rr*kv + np.identity(nat))**3) \
@@ -268,57 +267,57 @@ class ensemble(object):
             if True:
                 for i in range(nat):
                     for j in range(nat):
-                        Dz[i,j] = -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
+    
+                        Dz[i,j] = +1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
                         self.rr[i,j])*(1/self.vg)
-
-                        
 
             #Interaction part
             Di = np.zeros([nat,nat,3,3], dtype = complex)
 
-
+            
             for i in range(nat):
                 for j in range(nat):
-                    if i==j: continue
                         
                     Di[i,j,0,0] = d01m*d1m0*(D1[i,j] -\
                                             self.xp[i,j]*self.xm[i,j]*D2[i,j]-\
-                                            (self.epm[i]*(self.ep[j])+\
-                                            self.em[j]*(self.em[i]))*Dz[i,j])
+                                            (np.conjugate(self.ep[i])*self.ep[j]+\
+                                            self.em[i]*np.conjugate(self.em[j]))*Dz[i,j])
                     
                     Di[i,j,0,1] = d01m*d00*(-self.xp[i,j]*self.x0[i,j]*D2[i,j] - \
-                                            (self.epm[i]*(self.ez[j])+\
-                                            self.ezm[j]*(self.em[i]))*Dz[i,j]);
+                                            (np.conjugate(self.ep[i])*(self.ez[j])-\
+                                            self.em[i]*np.conjugate(self.ezm[j]))*Dz[i,j]);
                                             
                     Di[i,j,0,2] = d01m*d10*(-self.xp[i,j]*self.xp[i,j]*D2[i,j] -\
-                                            (self.epm[i]*(self.em[j])+\
-                                             self.epm[j]*(self.em[i]))*Dz[i,j]);
+                                            (np.conjugate(self.ep[i])*(self.em[j])+\
+                                             self.em[i]*np.conjugate(self.epm[j]))*Dz[i,j]);
                                             
-                    Di[i,j,1,0] = d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j] + \
-                                            (self.ezm[i]*(self.ep[j])+\
-                                            self.em[j]*(self.ez[i]))*Dz[i,j]);
+                    Di[i,j,1,0] = d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j] -\
+                                            (np.conjugate(self.ez[i])*(self.ep[j])-\
+                                            self.ez[i]*np.conjugate(self.em[j]))*Dz[i,j]);
                                             
                     Di[i,j,1,1] = d00*d00*(D1[i,j] + \
-                                           self.x0[i,j]*self.x0[i,j]*D2[i,j]+\
-                                           (self.ezm[i]*(self.ez[j])+\
-                                           self.ezm[j]*(self.ez[i]))*Dz[i,j]);
+                                           self.x0[i,j]*self.x0[i,j]*D2[i,j]-\
+                                           (np.conjugate(self.ez[i])*(self.ez[j])+\
+                                           self.ez[i]*np.conjugate(self.ez[j]))*Dz[i,j]);
                                            
-                    Di[i,j,1,2] = d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j] + \
-                                           (self.ezm[i]*(self.em[j])+\
-                                           self.epm[j]*(self.ez[i]))*Dz[i,j]);
+                    Di[i,j,1,2] = d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j] - \
+                                           (np.conjugate(self.ez[i])*(self.em[j])-\
+                                           self.ez[i]*np.conjugate(self.epm[j]))*Dz[i,j]);
                                             
                     Di[i,j,2,0] = d01*d1m0*(-self.xm[i,j]*self.xm[i,j]*D2[i,j] -\
-                                            (self.em[i]*(self.ep[j])+\
-                                            self.em[j]*(self.ep[i]))*Dz[i,j]);
+                                            (np.conjugate(self.em[i])*(self.ep[j])+\
+                                            self.ep[i]*np.conjugate(self.em[j]))*Dz[i,j]);
                                             
                     Di[i,j,2,1] = d01*d00*(-self.xm[i,j]*self.x0[i,j]*D2[i,j]-\
-                                            (self.em[i]*(self.ez[j])+\
-                                            self.ezm[j]*(self.em[i]))*Dz[i,j]);
+                                            (np.conjugate(self.em[i])*(self.ez[j])-\
+                                            self.ep[i]*np.conjugate(self.ez[j]))*Dz[i,j]);
                                             
-                    Di[i,j,2,2] = d01*d10*(D1[i,j]- self.xm[i,j]*self.xp[i,j]*D2[i,j]- \
-                                            (self.em[i]*(self.em[j])+\
-                                            self.epm[j]*(self.ep[i]))*Dz[i,j])
-             
+                    Di[i,j,2,2] = d01*d10*(D1[i,j]- \
+                                            self.xm[i,j]*self.xp[i,j]*D2[i,j]- \
+                                            (np.conjugate(self.em[i])*(self.em[j])+\
+                                            self.ep[i]*np.conjugate(self.epm[j]))*Dz[i,j])
+            
+            print(np.linalg.eigvals(Di[0,0,:,:]))
             #Basis part              
             if self.typ == 'L': 
                 from itertools import product as combi
@@ -400,35 +399,38 @@ class ensemble(object):
                 Sigmad = (np.identity(nat*3,dtype=complex))
                 for i in range(nat):
 
+                    #--In-- chanel
                     ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
-                    *np.conjugate(self.em[i])
-                    ddRight[3*i+1] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
-                    *np.conjugate(self.ez[i])
+                    *self.em[i]
+                    ddRight[3*i+1] = -np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                    *self.ez[i] 
                     ddRight[3*i+2] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                    *self.ep[i]
+                    
+                    #-- Out Forward --
+                    ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
+                    ddLeftF[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
+                    ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
                     
-                    ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.em[i]
-                    ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.ez[i]
-                    ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.ep[i]
-           
+                    # -- Out Backward --
                     ddLeftB[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.em[i]
-                    ddLeftB[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.ez[i]
+                    *np.conjugate(self.em[i])
+                    ddLeftB[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
                     ddLeftB[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *self.ep[i]
+                    *np.conjugate(self.ep[i])
                     
            
                     for j in range(3):
                         if j == 1: 
-                            a = 0
-                        else:
                             a = 1
+                        else:
+                            a = 0
                             
-                        Sigmad[(i)*3+j,(i)*3+j] =(1+3*a*0.5*(gd[i]-1))*0.5j 
+                        Sigmad[(i)*3+j,(i)*3+j] =0*(-0.0355+0.0*3*a*0.5*(gd[i]-1))*0.5j 
                
                #distance dependance of dacay rate
                # there is no in/out gaussian chanel  
@@ -447,7 +449,7 @@ class ensemble(object):
                 Sigma = Sigmad+omega*One
                 V =  1*(- self.D/hbar/lambd/lambd )
                 ResInv = Sigma + V   
-                Resolventa =  inverse(ResInv,ddRight)
+                Resolventa =  np.dot(np.linalg.inv(ResInv),ddRight)
                 TF_ = np.dot(Resolventa,ddLeftF)*2*np.pi*hbar*kv
                 TB_ = np.dot(Resolventa,ddLeftB)*2*np.pi*hbar*kv
                 
@@ -474,12 +476,12 @@ class ensemble(object):
             plt.show()
             
             plt.title('Loss')
-            plt.plot(self.deltaP, np.ones(len(self.deltaP))-(abs(self.Reflection)**2\
+            plt.plot(self.deltaP, 1-(abs(self.Reflection)**2\
             +abs(self.Transmittance)**2), 'g-',lw=1.5)
             plt.show()
-            nat=self.nat
+         
             
-            #scale constants
+ #scale constants
 
 
 hbar = 1 #dirac's constant = 1 => enrergy = omega
@@ -504,7 +506,7 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-30, 35.1, 100)*gd
+freq = np.linspace(-1, 1, 100)*gd
 step = lambd0
 
 
@@ -518,15 +520,16 @@ ______________________________________________________________________________
 
 if __name__ == '__main__':
     args = {
-            'nat':200, #number of atoms
+            'nat':1, #number of atoms
             'nb':5, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
-            'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
+            'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 1.5, # distance from fiber
             'l0':lambd0, # mean distance between atoms (lambdabar units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
             }
+            
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
