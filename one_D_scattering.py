@@ -1,36 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 14 14:00:47 2016
-
-@author: viacheslav
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 28 18:47:05 2016
-
-@author: viacheslav
-"""
 
 # -*- coding: utf-8 -*-
 """
 Created 23.07.16
-
 AS Sheremet's matlab code implementation 
-
 n = 1.45 - the case that we only need to calculate
-n = 1.1 - the other case
 
 UNSOLVED:
-|t|^2 ~ N^2 (as N->inf and as vacuum prop is on)
-
-
-FUTURE:
-V - atom (Self-Energy part needs to be modified)
-
-
-
-
+Linear Polarizations
+Lambda atom (all scattering channels)
 
 """
 
@@ -90,6 +67,9 @@ class ensemble(object):
             self.D =  np.zeros([nat,nat],dtype=complex)
             self.Transmittance = np.zeros(len(deltaP),dtype=complex);
             self.Reflection = np.zeros(len(deltaP),dtype=complex);
+            self.iTransmittance = np.zeros(len(deltaP),dtype=complex);
+            self.iReflection = np.zeros(len(deltaP),dtype=complex);
+            self.SideScattering = np.zeros(len(deltaP),dtype=float);
             self.CrSec = np.zeros(len(deltaP),dtype=complex)
             self._foo = [[[]]]
             self.g = 1.06586/c;  #decay rate corrected in presence of a nanofiber, units of gamma 
@@ -206,7 +186,6 @@ class ensemble(object):
             Method creates st-matrix, then creates D matrix and reshapes D 
             matrix into 1+1 matrix with respect to selection rules
             
-
             
             We consider situation when the atom interacts just with some neighbours
             (in Raman chanel!).
@@ -377,6 +356,7 @@ class ensemble(object):
                 
                 ddLeftF = np.zeros(nat*3**nb, dtype=complex);
                 ddLeftB = np.zeros(nat*3**nb, dtype=complex);
+
                 ddRight = np.zeros(nat*3**nb, dtype=complex);  
                 One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
                 Sigmad = (np.identity(nat*3**nb,dtype=complex))
@@ -394,6 +374,8 @@ class ensemble(object):
                 
                 ddLeftF = np.zeros(3*nat, dtype=complex);
                 ddLeftB = np.zeros(3*nat, dtype=complex);
+                ddLeftFm = np.zeros(3*nat, dtype=complex);
+                ddLeftBm = np.zeros(nat*3, dtype=complex);
                 ddRight = np.zeros(3*nat, dtype=complex); 
                 One = (np.identity(3*nat)) #Unit in V-atom
                 Sigmad = (np.identity(nat*3,dtype=complex))
@@ -423,14 +405,31 @@ class ensemble(object):
                     ddLeftB[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
                     
+                    
+                    #-- Out Forward -- (inelastic)
+                    ddLeftFm[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ep[i])
+                    ddLeftFm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
+                    ddLeftFm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
+                    
+                    # -- Out Backward -- (inelastic)
+                    ddLeftBm[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ep[i])
+                    ddLeftBm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
+                    ddLeftBm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
+                    
            
                     for j in range(3):
                         if j == 1: 
                             a = 1
                         else:
-                            a = 0
+                            a = 1
                             
-                        Sigmad[(i)*3+j,(i)*3+j] =0*(-0.0355+0.0*3*a*0.5*(gd[i]-1))*0.5j 
+                        Sigmad[(i)*3+j,(i)*3+j] =0.5j 
                
                #distance dependance of dacay rate
                # there is no in/out gaussian chanel  
@@ -457,8 +456,18 @@ class ensemble(object):
                 self.Transmittance[k] = 1.+(-1j/hbar*(TF_)/(self.vg))
                 self.Reflection[k] = (-1j/hbar*(TB_/(self.vg)))
                 
-                
+                #i prefix stands for inelastic scattering into fundamental mode
+                if self.typ == 'V':
                     
+                    
+                    iTF_ = np.dot(Resolventa,ddLeftFm)*2*np.pi*hbar*kv
+                    iTB_ = np.dot(Resolventa,ddLeftBm)*2*np.pi*hbar*kv
+                    
+                    self.iTransmittance[k] = (-1j/hbar*(iTF_)/(self.vg))                  
+                    self.iReflection[k] =  (-1j/hbar*(iTB_/(self.vg)))
+                     
+                    self.SideScattering[k] =1 - abs(self.Transmittance[k])**2-abs(self.Reflection[k])**2-\
+                                          abs(self.iTransmittance[k])**2-abs(self.iReflection[k])**2
                 
                 ist = 100*k / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
@@ -473,11 +482,24 @@ class ensemble(object):
             plt.plot(self.deltaP,(abs(self.Reflection)**2 ), 'r-',label='R',lw=1.5)
             plt.plot(self.deltaP, abs(self.Transmittance)**2, 'm-', label='T',lw=1.5)
             plt.legend()
+            plt.xlabel('Detuning, $\gamma$',fontsize=16)
+            plt.ylabel('R,T',fontsize=16)
+            plt.savefig('Ph. Crystal.png',dpi=700)
             plt.show()
             
+            plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
+            plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
+            plt.legend()
+            plt.xlabel('Detuning, $\gamma$',fontsize=16)
+            plt.ylabel('R,T',fontsize=16)
+            plt.savefig('Ph. Crystal.png',dpi=700)
+            plt.show()
+            
+            plt.xlabel('Detuning, $\gamma$')
+            plt.ylabel('R,T')
             plt.title('Loss')
-            plt.plot(self.deltaP, 1-(abs(self.Reflection)**2\
-            +abs(self.Transmittance)**2), 'g-',lw=1.5)
+            plt.plot(self.deltaP, self.SideScattering, 'g-',lw=1.5)
+            
             plt.show()
          
             
@@ -489,7 +511,7 @@ c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
 gd = 1.; #vacuum decay rate The only 
 lambd = 1; # atomic wavelength (lambdabar)
 k = 1/lambd
-lambd0 = 1.*np.pi  /1.0951842440279331; # period of atomic chain
+lambd0 = (1.005)*np.pi  /1.0685611328288454; # period of atomic chain
 a = 2*np.pi*200/850*lambd; # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica) 
 
@@ -506,7 +528,7 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-1, 1, 100)*gd
+freq = np.linspace(-40, 80, 180)*gd
 step = lambd0
 
 
@@ -514,14 +536,13 @@ step = lambd0
 ______________________________________________________________________________
 Executing program
 ______________________________________________________________________________
-
 """
 
 
 if __name__ == '__main__':
     args = {
-            'nat':1, #number of atoms
-            'nb':5, #number of neighbours in raman chanel (for L-atom only)
+            'nat':100, #number of atoms
+            'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 1.5, # distance from fiber
@@ -533,3 +554,4 @@ if __name__ == '__main__':
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
+    
