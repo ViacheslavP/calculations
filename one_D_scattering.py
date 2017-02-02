@@ -5,16 +5,21 @@ Created 23.07.16
 AS Sheremet's matlab code implementation 
 n = 1.45 - the case that we only need to calculate
 
-UNSOLVED:
-Linear Polarizations
-Lambda atom (all scattering channels)
-All that I've got I lost
+TODO: 
+
+  1. Correct Green's function: principal value and V atom decay with only 4 modes presented loss -> 0!!
+      The last condition will guarantee faithfulness of all calculations performed for both Lambda and V!
+  
+  2. Sparse matrix structure. 
+  3. Filling factor
+  
 """
 
 try:
     import mkl
     mkl.set_num_threads(mkl.get_max_threads())
     mkl.service.set_num_threads(mkl.get_max_threads())
+    
 except ImportError:
     print('MKL does not installed. MKL dramatically improves calculation time')
     
@@ -25,11 +30,7 @@ from scipy.sparse import csr_matrix as csc
 
 import numpy as np
 from time import time
-
-#from cudasolve import cuSparseSolve as cu
-
-
-        
+   
 
 def inverse(ResInv,ddRight):
     return alg.spsolve(csc(ResInv),(ddRight))
@@ -49,7 +50,8 @@ class ensemble(object):
                      l0=2*np.pi,
                      deltaP=np.asarray([0.]),
                      typ='L',
-                     dens=0.1
+                     dens=0.1,
+                     ff = 0.1
                      ):
                          
             self.rr = np.array([[]])
@@ -92,7 +94,7 @@ class ensemble(object):
             self.step=l0
             self.dens = dens
             self.typ = typ
-
+            self.ff = ff
             self.r = 1
 
             
@@ -101,7 +103,7 @@ class ensemble(object):
             """
             Method generates enseble for current atomic ensemble properties and
             finds requested number of neighbours
-            Yet it is a linear ensemble
+            
             """  
             step = self.step
             nat=self.nat
@@ -124,7 +126,26 @@ class ensemble(object):
                 y = 0.*np.ones(nat)
                 goo = [i for i in range(nat//2)]
                 z = np.asarray(goo+goo)*step
+            
+            
+            elif s=='ff_chain':
+                if ff>0.99:
+                    raise ValueError
                 
+                N = int( nat / self.ff )
+                L = N*self.step
+                """
+                
+                Creates a chain with a filling factor = ff 
+                I think that is not possible to have a two atoms in same location
+                within this alghoritm 
+                
+                """
+                x = self.d*a*np.ones(nat)
+                y = 0.*np.ones(nat)
+                z = (np.arange(nat)+np.sort(np.random.randint(N-nat,size=nat)))*step
+                
+                     
             else:
                 raise NameError('Ensemble type not found')
             
@@ -138,29 +159,32 @@ class ensemble(object):
 
             t1 = time()
             
-            if True:
-                ga = lambda x,w: 1/np.sqrt(np.pi*w**2)*np.exp(-x**2/w**2/2)    
-                self.phibex = -self.E(np.sqrt(x**2+y**2)) #for lambda-atom
-                
-                self.phib = ga(np.sqrt(x**2+y**2),self.wb)
-                
-                """
-                Exact mode components
-                e stands for exact mode
-                m,p,z stands for component
-                m stands for + \ phi (otherwise - \phi)
-                
-                """
-
-                self.em = -self.E(np.sqrt(x**2+y**2))
-                
-                self.ep = self.dE(np.sqrt(x**2+y**2))*(x-1j*y)**2/(x**2+y**2)
-                self.ez = self.Ez(np.sqrt(x**2+y**2))*(x-1j*y)/np.sqrt(x**2+y**2)
-                
-                self.epm = self.dE(np.sqrt(x**2+y**2))*(x+1j*y)**2/(x**2+y**2)
-                self.ezm = self.Ez(np.sqrt(x**2+y**2))*(x+1j*y)/np.sqrt(x**2+y**2)
             
+            ga = lambda x,w: 1/np.sqrt(np.pi*w**2)*np.exp(-x**2/w**2/2)    
+            self.phibex = -self.E(np.sqrt(x**2+y**2)) #for lambda-atom
+                
+            self.phib = ga(np.sqrt(x**2+y**2),self.wb)
+                
+            """
+            
+            Exact mode components
+            e stands for exact mode
+            m,p,z stands for component
+                
+                
+            minus - polarization 
+            REM: def of polarization = irreducible representation of U(1) group (fumndamental mode only!) 
+                
+            """
             self.r = np.sqrt(x**2+y**2)
+            
+            self.em = -self.E(self.r)
+                
+            self.ep = -self.dE(self.r)*(x-1j*y)**2/self.r/self.r
+            self.ez = self.Ez(self.r)*(x-1j*y)/self.r
+                
+            
+            
             self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
             -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
             self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
@@ -180,7 +204,7 @@ class ensemble(object):
             print('Ensemble was generated for ',time()-t1,'s')
             
         
-
+        
         def create_D_matrix(self):
             """
             Method creates st-matrix, then creates D matrix and reshapes D 
@@ -216,13 +240,17 @@ class ensemble(object):
             """
 
             def foo(ni1,nj2,i,j):
-
                 for ki1 in np.append(self.index[ni1,:],self.index[nj2,:]):
                     if ki1 == ni1 or ki1 == nj2: continue;
                     if (st[ni1,ki1,i] != st[nj2,ki1,j]):
                         return False
                 return True
 
+            
+            
+            """
+            Selecting neighbours only (experimental idea for subtractions)
+            """
             L = 3 * np.pi / 1
             def foo2(a):
                 if a > L:
@@ -236,67 +264,111 @@ class ensemble(object):
 
             kv = 1
             
-            D1 = 0*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
+            radiation_modes = 0. # = 1 iff assuming our model of radiation modes
+            
+            D1 = radiation_modes*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
                 ((self.rr*kv + np.identity(nat))**3) \
                 *np.exp(1j*self.rr*kv)) *(np.ones(nat)-np.identity(nat))   
-            D2 = 0*-1*hbar*kv*((3 - 3*1j*self.rr*kv - (self.rr*kv)**2)/((((kv*self.rr+\
+            D2 = radiation_modes*-1*hbar*kv*((3 - 3*1j*self.rr*kv - (self.rr*kv)**2)/((((kv*self.rr+\
             np.identity(nat))**3))*np.exp(1j*kv*self.rr)))
             
             Dz = np.zeros([nat,nat], dtype=complex)
-            if True:
-                for i in range(nat):
-                    for j in range(nat):
-    
-                        Dz[i,j] = +1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
-                        self.rr[i,j])*(1/self.vg)
-
-            #Interaction part
-            Di = np.zeros([nat,nat,3,3], dtype = complex)
-
             
             for i in range(nat):
                 for j in range(nat):
-                        
-                    Di[i,j,0,0] = d01m*d1m0*(D1[i,j] -\
-                                            self.xp[i,j]*self.xm[i,j]*D2[i,j]-\
-                                            (np.conjugate(self.ep[i])*self.ep[j]+\
-                                            self.em[i]*np.conjugate(self.em[j]))*Dz[i,j])
-                    
-                    Di[i,j,0,1] = d01m*d00*(-self.xp[i,j]*self.x0[i,j]*D2[i,j] - \
-                                            (np.conjugate(self.ep[i])*(self.ez[j])-\
-                                            self.em[i]*np.conjugate(self.ezm[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,0,2] = d01m*d10*(-self.xp[i,j]*self.xp[i,j]*D2[i,j] -\
-                                            (np.conjugate(self.ep[i])*(self.em[j])+\
-                                             self.em[i]*np.conjugate(self.epm[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,1,0] = d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j] -\
-                                            (np.conjugate(self.ez[i])*(self.ep[j])-\
-                                            self.ez[i]*np.conjugate(self.em[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,1,1] = d00*d00*(D1[i,j] + \
-                                           self.x0[i,j]*self.x0[i,j]*D2[i,j]-\
-                                           (np.conjugate(self.ez[i])*(self.ez[j])+\
-                                           self.ez[i]*np.conjugate(self.ez[j]))*Dz[i,j]);
-                                           
-                    Di[i,j,1,2] = d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j] - \
-                                           (np.conjugate(self.ez[i])*(self.em[j])-\
-                                           self.ez[i]*np.conjugate(self.epm[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,2,0] = d01*d1m0*(-self.xm[i,j]*self.xm[i,j]*D2[i,j] -\
-                                            (np.conjugate(self.em[i])*(self.ep[j])+\
-                                            self.ep[i]*np.conjugate(self.em[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,2,1] = d01*d00*(-self.xm[i,j]*self.x0[i,j]*D2[i,j]-\
-                                            (np.conjugate(self.em[i])*(self.ez[j])-\
-                                            self.ep[i]*np.conjugate(self.ez[j]))*Dz[i,j]);
-                                            
-                    Di[i,j,2,2] = d01*d10*(D1[i,j]- \
-                                            self.xm[i,j]*self.xp[i,j]*D2[i,j]- \
-                                            (np.conjugate(self.em[i])*(self.em[j])+\
-                                            self.ep[i]*np.conjugate(self.epm[j]))*Dz[i,j])
+    
+                    Dz[i,j] = -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
+                    self.rr[i,j])*(1/self.vg - radiation_modes / c)
+
+
+            #Interaction part (and self-interaction for V-atom)
+            Di = np.zeros([nat,nat,3,3], dtype = complex)
             
-            print(np.linalg.eigvals(Di[0,0,:,:]))
+            
+            for i in range(nat):
+                for j in range(nat):
+                    
+                    """
+                    ________________________________________________________
+                    Guided modes interaction (and self-energy for V atom)
+                    ________________________________________________________
+                    
+                    I am using next notations:
+                        epfjc - vector guided mode of Electric field 
+                                                   in Plus polarisation (c REM in 176)
+                                          propagating Forward
+                                                   in J-th atom position
+                                                  and Conjugated components
+                    
+                    forward - part of Green's function for propagating forward (!)
+                    backward - guess what
+                    
+                    The Result for self-energy is obtained analytically
+                    Since it is very easy to got myselfself (for me) I do multiplicate 
+                    metric_tensor markedly to Green's tensor to obtain \Sigma (for Lambda and V atoms only!).
+                    
+                                                       e+            e0           e-
+                      
+                    """
+                    
+                    emfi  =                np.array([self.ep[i], self.ez[i], self.em[i]], dtype=complex)
+                    emfjc =  np.conjugate( np.array([self.ep[j], self.ez[j], self.em[j]], dtype=complex) )
+                    
+                    epfi  =  np.conjugate( np.array([self.em[i], self.ez[i], self.ep[i]], dtype=complex) )
+                    epfjc =                np.array([self.em[j], self.ez[j], self.ep[j]], dtype=complex)
+                    
+                    
+                    
+                    embi  =                np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=complex)
+                    embjc =  np.conjugate( np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=complex) )
+                    
+                    epbi  =  np.conjugate( np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=complex) )
+                    epbjc =                np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=complex)
+                    
+                    forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
+                    backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
+                    
+                    if i==j: #For doublechain it won't work!
+                        Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
+                        
+                    elif i>j:
+                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
+                        
+                    elif i<j:
+                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
+                    
+                    
+                    metric_tensor = np.array([[0,0,-1],[0,1,0],[-1,0,0]], dtype=complex)
+                    Di[i,j,:,:] = np.dot(metric_tensor, Di[i,j,:,:])
+                    """
+                    _________________________________________________________
+                    Vacuum interaction (No self-energy)
+                    _________________________________________________________
+                    """
+                        
+                    Di[i,j,0,0] += d01m*d1m0*(D1[i,j] -\
+                                            self.xp[i,j]*self.xm[i,j]*D2[i,j])
+                                            
+                    
+                    Di[i,j,0,1] += d01m*d00*(-self.xp[i,j]*self.x0[i,j]*D2[i,j]);
+                                            
+                    Di[i,j,0,2] += d01m*d10*(-self.xp[i,j]*self.xp[i,j]*D2[i,j] );
+                                            
+                    Di[i,j,1,0] += d00*d1m0*(self.x0[i,j]*self.xm[i,j]*D2[i,j] );
+                                            
+                    Di[i,j,1,1] += d00*d00*(D1[i,j] + \
+                                           self.x0[i,j]*self.x0[i,j]*D2[i,j]);
+                                           
+                    Di[i,j,1,2] += d00*d10*(self.x0[i,j]*self.xp[i,j]*D2[i,j] );
+                                            
+                    Di[i,j,2,0] += d01*d1m0*(-self.xm[i,j]*self.xm[i,j]*D2[i,j]);
+                                            
+                    Di[i,j,2,1] += d01*d00*(-self.xm[i,j]*self.x0[i,j]*D2[i,j]);
+                                            
+                    Di[i,j,2,2] += d01*d10*(D1[i,j]- \
+                                            self.xm[i,j]*self.xp[i,j]*D2[i,j])
+            
+            
             #Basis part              
             if self.typ == 'L': 
                 from itertools import product as combi
@@ -335,10 +407,6 @@ class ensemble(object):
             else:
                 raise NameError('No such type')
 
-            from matplotlib.pylab import spy,show
-            spy(self.D) # Visualise matrix
-            #spy(neigh)
-            show()
 
             
         def reflection_calc(self):
@@ -384,43 +452,43 @@ class ensemble(object):
                     #--In-- chanel
                     ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.em[i]
-                    ddRight[3*i+1] = -np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                    ddRight[3*i+1] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.ez[i] 
                     ddRight[3*i+2] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.ep[i]
                     
                     #-- Out Forward --
-                    ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
-                    ddLeftF[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ez[i])
-                    ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftF[3*i] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
+                    ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
+                    ddLeftF[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
                     
                     # -- Out Backward --
                     ddLeftB[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
-                    ddLeftB[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ep[i])
+                    ddLeftB[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
                     ddLeftB[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
+                    *np.conjugate(self.em[i])
                     
                     
                     #-- Out Forward -- (inelastic)
                     ddLeftFm[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
-                    ddLeftFm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
+                    ddLeftFm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
                     ddLeftFm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
+                    *np.conjugate(self.ep[i])
                     
                     # -- Out Backward -- (inelastic)
-                    ddLeftBm[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
-                    ddLeftBm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ez[i])
-                    ddLeftBm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftBm[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.em[i])
+                    ddLeftBm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ez[i])
+                    ddLeftBm[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ep[i])
                     
            
                     for j in range(3):
@@ -429,7 +497,7 @@ class ensemble(object):
                         else:
                             a = 1
                             
-                        Sigmad[(i)*3+j,(i)*3+j] =0.5j 
+                        Sigmad[(i)*3+j,(i)*3+j] =0*0.5j 
                
                #distance dependance of dacay rate
                # there is no in/out gaussian chanel  
@@ -486,6 +554,7 @@ class ensemble(object):
             plt.ylabel('R,T',fontsize=16)
             plt.savefig('Ph. Crystal.png',dpi=700)
             plt.show()
+            plt.clf()
             
             plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
             plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
@@ -494,14 +563,14 @@ class ensemble(object):
             plt.ylabel('R,T',fontsize=16)
             plt.savefig('Ph. Crystal.png',dpi=700)
             plt.show()
+            plt.clf()
             
             plt.xlabel('Detuning, $\gamma$')
             plt.ylabel('R,T')
             plt.title('Loss')
             plt.plot(self.deltaP, self.SideScattering, 'g-',lw=1.5)
-            
             plt.show()
-         
+            plt.clf()
             
  #scale constants
 
@@ -511,7 +580,7 @@ c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
 gd = 1.; #vacuum decay rate The only 
 lambd = 1; # atomic wavelength (lambdabar)
 k = 1/lambd
-lambd0 = (1.005)*np.pi  /1.0685611328288454; # period of atomic chain
+lambd0 = (1.0025)*np.pi  /1.0685611328288454; # period of atomic chain
 a = 2*np.pi*200/850*lambd; # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica) 
 
@@ -528,7 +597,7 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-40, 80, 180)*gd
+freq = np.linspace(-3, 3, 180)*gd
 step = lambd0
 
 
@@ -541,7 +610,7 @@ ______________________________________________________________________________
 
 if __name__ == '__main__':
     args = {
-            'nat':100, #number of atoms
+            'nat':2, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
@@ -549,6 +618,7 @@ if __name__ == '__main__':
             'l0':lambd0, # mean distance between atoms (lambdabar units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
+            'ff': 0.1
             }
             
     chi = ensemble(**args)

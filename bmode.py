@@ -2,11 +2,12 @@
 """
 Created on Tue Dec 13 16:45:02 2016
 
-@author: viacheslav
+@author: ViacheslavP
 """
 import numpy as np
 from scipy.special import jn,kn
 import os
+
 
 class exact_mode(object):
     
@@ -20,26 +21,27 @@ class exact_mode(object):
         self._norm = 1.
         self.vg = 0
         self._a = a        
+        
         self.E = lambda x: x
         self.dE = lambda x: x       
         self.Ez = lambda x: x
         
         self.Er = lambda x: x
         self.Ephi = lambda x: x 
+        
         self.generate_mode()
         
         
     def generate_mode(self):
         """
         1.Due to the fact that characteristic equation contains various bessel
-        functions, I am using symbolical calculus. The alter way is to use 
-        high order approximation of derivatives.
+        functions, I am using symbolical evaluation to compute derivative. The alter way is to use 
+        high order approximation of derivatives (which is not seems reasonable!).
         ceq(x,_k) = 0 - the spectral problem equation
         x = beta
         _k = omega/c
-        2.In multimode regime some sort of bias could happen. 
-        3.Since I got several problems with straight solving boundary conditions,
-        I prefer to use symbolical solver
+        2.In multimode regime some sort of bias could happen (clearly: It will calculate all wrong!). 
+
         """
         
         import sympy as sp
@@ -73,9 +75,11 @@ class exact_mode(object):
         V = self._k*a*np.sqrt(self._n**2-1)
         if V > 2.405:
             print("WARNING:Multimode regime. V = ",V)
+            raise ValueError 
         
         foo_eq = sp.lambdify([x,_k],sp.re(ceq),modules=libraries)
         eig_eq = lambda x: foo_eq(x,self._k)
+        
         """ First boundary condition (characteristic equation) """
         self._beta = krlv(eig_eq, self._k*(self._n+1)/2)
         #self._beta = brd(eig_eq, self._k*(self._n+1)/2, f_tol = 0.0001)
@@ -95,16 +99,18 @@ class exact_mode(object):
         
 
         """
+        
         Mode components as it presented in Balykin's paper. 
         Cylindrical components are exact as in fundamental_mode.py
         Decomposition components are multiplied by sqrt(2) (discuss!! It was my fault)
         The polariztion components of the mode are: 
-        E+  = - E e+ + dE exp(2 i phi) e- + Ez exp(i phi) ez
-        E- =  - E e- + dE exp(-2i phi) e+ + Ez exp(-i phi) ez
+        E+  =  E e+ + dE exp(2 i phi) e- + Ez exp(i phi) ez
+        E- =  - E e- - dE exp(-2i phi) e+ + Ez exp(-i phi) ez
         
-        
+        It is normalized to be $ \int |E(r)| ^ 2 dx dy = \lambdabar ^ 2 (x,y in cm), 
+                            or  \int |E(r)| ^ 2 dx dy = 1 (x,y in \lambdabar) $ 
         """
-        r,hc = sp.symbols('r,hc')
+        
         ha = self._ha
         qa = self._qa
         s = (1/qa/qa+1/ha/ha)/((-kn(0,qa)-kn(2,qa))/2/qa/kn(1,qa)+(jn(0,ha)-jn(2,ha))/2/ha/jn(1,ha))
@@ -128,11 +134,13 @@ class exact_mode(object):
         
         _fooint = lambda r: r* (abs(E(r))**2 + abs(dE(r))**2 + abs(Ez(r))**2)
         _norm = np.sqrt(quad(_fooint,0,np.inf)[0]*2*np.pi)
-        self.E = lambda r: 1j*E(r) / _norm
+        
+        self.E = lambda r: -1j*E(r) / _norm
         self.dE = lambda r: 1j*dE(r) /_norm
         self.Ez = lambda r: Ez(r)/_norm
         
-        
+        self.Ephi = lambda r: -1j / np.sqrt(2) * (self.E(r) + self.dE(r))
+        self.Er = lambda r: -1 / np.sqrt(2) * (self.E(r) - self.dE(r))        
 
 if __name__ == '__main__':
     args = {'k':1, 
