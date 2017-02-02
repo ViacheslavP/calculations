@@ -23,6 +23,9 @@ class exact_mode(object):
         self.E = lambda x: x
         self.dE = lambda x: x       
         self.Ez = lambda x: x
+        
+        self.Er = lambda x: x
+        self.Ephi = lambda x: x 
         self.generate_mode()
         
         
@@ -132,4 +135,8 @@ class exact_mode(object):
         
 
 if __name__ == '__main__':
-        m = exact_mode(1, 1.45, 2*np.pi*200/780)
+    args = {'k':1, 
+            'n':1.45,
+            'a': 2*np.pi*200/850
+            }
+    m = exact_mode(**args)
