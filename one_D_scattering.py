@@ -11,8 +11,7 @@ TODO:
       The last condition will guarantee faithfulness of all calculations performed for both Lambda and V!
   
   2. Sparse matrix structure. 
-  3. Filling factor
-  
+
 """
 
 try:
@@ -306,6 +305,7 @@ class ensemble(object):
                     The Result for self-energy is obtained analytically
                     Since it is very easy to got myselfself (for me) I do multiplicate 
                     metric_tensor markedly to Green's tensor to obtain \Sigma (for Lambda and V atoms only!).
+                    Formula: \Sigma_m,m' = - g_{m,\mu} \delta_{m',\nu} |d0|^2 G_{\mu,\nu}
                     
                                                        e+            e0           e-
                       
@@ -332,14 +332,14 @@ class ensemble(object):
                         Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
                     elif i>j:
-                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
+                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00 
                         
                     elif i<j:
                         Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
                     
                     
-                    metric_tensor = np.array([[0,0,-1],[0,1,0],[-1,0,0]], dtype=complex)
-                    Di[i,j,:,:] = np.dot(metric_tensor, Di[i,j,:,:])
+                    metric_tensor = -np.array([[0,0,-1],[0,1,0],[-1,0,0]], dtype=complex)
+                    Di[i,j,:,:] = np.dot( Di[i,j,:,:],metric_tensor) 
                     """
                     _________________________________________________________
                     Vacuum interaction (No self-energy)
@@ -458,11 +458,11 @@ class ensemble(object):
                     *self.ep[i]
                     
                     #-- Out Forward --
-                    ddLeftF[3*i] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
-                    ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftF[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
-                    ddLeftF[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.em[i])
                     
                     # -- Out Backward --
@@ -483,11 +483,11 @@ class ensemble(object):
                     *np.conjugate(self.ep[i])
                     
                     # -- Out Backward -- (inelastic)
-                    ddLeftBm[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftBm[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.em[i])
-                    ddLeftBm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftBm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
-                    ddLeftBm[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    ddLeftBm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
                     
            
