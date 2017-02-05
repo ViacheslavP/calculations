@@ -1,5 +1,6 @@
 
 # -*- coding: utf-8 -*-
+
 """
 Created 23.07.16
 AS Sheremet's matlab code implementation 
@@ -144,7 +145,7 @@ class ensemble(object):
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
                 z = (np.arange(nat)+np.sort(np.random.randint(N-nat,size=nat)))*step
-                     
+    
             else:
                 raise NameError('Ensemble type not found')
             
@@ -335,6 +336,7 @@ class ensemble(object):
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
                     
+                    
                     if i==j: #For doublechain it won't work!
                         Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
@@ -345,7 +347,7 @@ class ensemble(object):
                         Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
                     
                     
-                    
+                    print(Di[i,i,:,:])
 
                     """
                     _________________________________________________________
@@ -481,7 +483,7 @@ class ensemble(object):
                     
            
                 for j in range(3):
-                    Sigmad[(i)*3+j,(i)*3+j] = 0.5j  #Vacuum decay
+                    Sigmad[(i)*3+j,(i)*3+j] = 0*0.5j  #Vacuum decay
 
             """
             ________________________________________________________________
@@ -529,7 +531,8 @@ class ensemble(object):
             c=1
             
             #Decay rate for Lambda atom with respect of guided modes
-            gd = 8*d00*d00*np.pi*k*(1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + abs(self.ez)**2)  
+            gd = 1+8*d00*d00*np.pi*k*((1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + \
+                                                                            abs(self.ez)**2)  + RADIATION_MODES_MODEL/c * abs(self.ez)**2 )
             
             
             """
@@ -662,7 +665,7 @@ class ensemble(object):
             plt.legend()
             plt.xlabel('Detuning, $\gamma$',fontsize=16)
             plt.ylabel('R,T',fontsize=16)
-            plt.savefig('Ph. Crystal.png',dpi=700)
+            plt.savefig('TnR.png',dpi=700)
             plt.show()
             plt.clf()
             
@@ -671,7 +674,7 @@ class ensemble(object):
             plt.legend()
             plt.xlabel('Detuning, $\gamma$',fontsize=16)
             plt.ylabel('R,T',fontsize=16)
-            plt.savefig('Ph. Crystal.png',dpi=700)
+            plt.savefig('TnR_rot.png',dpi=700)
             plt.show()
             plt.clf()
             
@@ -723,14 +726,14 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':2, #number of atoms
-            'nb':1, #number of neighbours in raman chanel (for L-atom only)
+            'nat':1, #number of atoms
+            'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
-            'l0':1.0025, # mean distance between atoms (in lambda_m /2 units)
+            'l0':1.00, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
-            'typ':'L',  # L or V for Lambda and V atom resp.
+            'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
             
             }
@@ -738,4 +741,5 @@ if __name__ == '__main__':
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
+    print(chi.ep)
     

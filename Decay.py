@@ -9,7 +9,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from bmode import exact_mode
 
-a = 2*np.pi*200/850
+from matplotlib import rc
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica'],'size':16})
+rc('text', usetex=True)
+
+
+a = 2*np.pi*200/780
 ndots = 100
 c = 1
 kv =1 
@@ -22,7 +27,7 @@ args = {'k': 1,
 m = exact_mode(**args)
 
 
-x = np.linspace(1, 5, ndots) * a
+x = np.linspace(1, 3, ndots) * a
 
 em = -m.E(x)
 ez = m.Ez(x)
@@ -41,15 +46,11 @@ for i in range(ndots):
     emfi  =                np.array([ep[i], ez[i], em[i]], dtype=complex)
     emfic =  np.conjugate( np.array([ep[i], ez[i], em[i]], dtype=complex) )
                     
-    gamma[i] = d00*d00 *( (np.dot(emfi,emfic)* 2j*np.pi*kv*(1/m.vg - 1/c)  + ez[i]*ez[i]*2j*np.pi*kv/c))
+    gamma[i] = 2*d00*d00 *( (np.dot(emfi,emfic)* 2*np.pi*kv*(1/m.vg - 1/c)  + ez[i]*ez[i]*2*np.pi*kv/c))
     
     
-                    
 
     
-plt.plot(x/a,(1-2j*gamma), 'g-')   
-
-plt.show() 
 
 
 
@@ -64,6 +65,8 @@ ___________________________________________________
 Sigma = np.zeros([3,3,ndots],dtype=complex)
 
 for i in range(ndots):
+    
+    
     emfi  =                np.array([ep[i], ez[i], em[i]], dtype=complex)
     emfic =  np.conjugate( np.array([ep[i], ez[i], em[i]], dtype=complex) )
                     
@@ -87,8 +90,18 @@ for i in range(ndots):
     Sigma[:,:,i] = 0.5*d00*d00 * 3 *(forward+backward)*-1*2j*np.pi*kv*(1/m.vg - 1/c) 
     
 
+Sigma[1,1,:] += Sigma[1,1,:]* (1/c)/(1/m.vg - 1/c)  
 
-plt.plot(x/a,(1+2j*Sigma[0,0,:]), 'r-')
-plt.plot(x/a,(1+2j*Sigma[1,1,:]), 'b-')   
-plt.plot(x/a,(-2j*Sigma[2,0,:]), 'b-')  
+plt.plot(x/a,(1+2*gamma), 'g-', lw=1.5, label = '$\gamma_{\Lambda}$')   
+plt.plot(x/a,(1+2j*Sigma[0,0,:]), 'r-', lw=1.5, label = '$\gamma_{++}$')
+plt.plot(x/a,(1+2j*Sigma[1,1,:]), 'b-', lw=1.5, label = '$\gamma_{00}$')    
+
+plt.ylabel('$\gamma / \gamma_0$')
+plt.xlabel('$r / a$')
+plt.legend()   
+    
+plt.savefig('gammas.svg', dpi = 600)
 plt.show()    
+
+
+
