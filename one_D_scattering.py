@@ -536,6 +536,7 @@ class ensemble(object):
                     self.SideScattering[k] =1 - abs(self.Transmittance[k])**2-abs(self.Reflection[k])**2-\
                                           abs(self.iTransmittance[k])**2-abs(self.iReflection[k])**2
                 
+                
                 ist = 100*k / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
                 sys.stdout.flush()
@@ -611,6 +612,7 @@ ______________________________________________________________________________
 
 if __name__ == '__main__':
     args = {
+        
             'nat':100, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
@@ -620,6 +622,7 @@ if __name__ == '__main__':
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
+            
             }
             
     chi = ensemble(**args)

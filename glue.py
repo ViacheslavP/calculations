@@ -1,6 +1,6 @@
 """
 
-Script is to do calculations on server 
+Script is supposed to do calculations on server 
 
 directory must include:
 
