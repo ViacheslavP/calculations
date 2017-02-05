@@ -305,7 +305,7 @@ class ensemble(object):
                     backward - guess what
                     
                     The Result for self-energy is obtained analytically
-                    Since it is very easy to got myselfself (for me) I do multiplicate 
+                    
                     
                                                        e+            e0           e-
                       

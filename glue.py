@@ -14,7 +14,7 @@ from one_D_scattering import ensemble
 
 from time import time
 
-
+ 
 args = {
         'nat':100, #number of atoms
         'nb':0, #number of neighbours in raman chanel (for L-atom only)

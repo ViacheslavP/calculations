@@ -2,7 +2,7 @@
 
 @author: ViacheslavP
 
-Drawing of decay rate of Lambda-atom and for V-atom
+Script for drawing of decay rate of Lambda-atom and for V-atom
 
 """
 import numpy as np
