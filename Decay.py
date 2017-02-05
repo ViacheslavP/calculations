@@ -86,11 +86,9 @@ for i in range(ndots):
     
     Sigma[:,:,i] = 0.5*d00*d00 * 3 *(forward+backward)*-1*2j*np.pi*kv*(1/m.vg - 1/c) 
     
-    metric_tensor = np.array([[0,0,-1],[0,1,0],[-1,0,0]], dtype=complex)
-    Sigma[:,:,i] = np.dot( Sigma[:,:,i],metric_tensor) 
-    
+
 
 plt.plot(x/a,(1+2j*Sigma[0,0,:]), 'r-')
 plt.plot(x/a,(1+2j*Sigma[1,1,:]), 'b-')   
-
+plt.plot(x/a,(-2j*Sigma[2,0,:]), 'b-')  
 plt.show()    

@@ -90,7 +90,7 @@ class ensemble(object):
             self.nat = nat
             self.nb = nb
             self.deltaP=deltaP
-            self.step=l0
+            self.step=l0*np.pi/self.kv
             self.dens = dens
             self.typ = typ
             self.ff = ff
@@ -128,7 +128,7 @@ class ensemble(object):
             
             
             elif s=='ff_chain':
-                if ff>0.99:
+                if self.ff>0.99:
                     raise ValueError
                 
                 N = int( nat / self.ff )
@@ -143,7 +143,6 @@ class ensemble(object):
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
                 z = (np.arange(nat)+np.sort(np.random.randint(N-nat,size=nat)))*step
-                
                      
             else:
                 raise NameError('Ensemble type not found')
@@ -200,7 +199,7 @@ class ensemble(object):
             self.create_D_matrix()
             self.reflection_calc()
 
-            print('Ensemble was generated for ',time()-t1,'s')
+            print('Current ensemble calculation time is ',time()-t1,'s')
             
         
         
@@ -263,7 +262,7 @@ class ensemble(object):
 
             kv = 1
             
-            radiation_modes = 0. # = 1 iff assuming our model of radiation modes
+            
             
             D1 = radiation_modes*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
                 ((self.rr*kv + np.identity(nat))**3) \
@@ -276,8 +275,11 @@ class ensemble(object):
             for i in range(nat):
                 for j in range(nat):
     
-                    Dz[i,j] = -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
-                    self.rr[i,j])*(1/self.vg - radiation_modes / c)
+                    Dz[i,j] =   \
+                                -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
+                    self.rr[i,j])*(1/self.vg) + \
+                                1*2j*np.pi*kv*np.exp(1j*(abs(self.x0[i,j]))* \
+                    self.rr[i,j])*(radiation_modes / c)
 
 
             #Interaction part (and self-interaction for V-atom)
@@ -304,8 +306,6 @@ class ensemble(object):
                     
                     The Result for self-energy is obtained analytically
                     Since it is very easy to got myselfself (for me) I do multiplicate 
-                    metric_tensor markedly to Green's tensor to obtain \Sigma (for Lambda and V atoms only!).
-                    Formula: \Sigma_m,m' = - g_{m,\mu} \delta_{m',\nu} |d0|^2 G_{\mu,\nu}
                     
                                                        e+            e0           e-
                       
@@ -332,14 +332,13 @@ class ensemble(object):
                         Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
                     elif i>j:
-                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00 
+                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00 
                         
                     elif i<j:
-                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
+                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
                     
                     
-                    metric_tensor = -np.array([[0,0,-1],[0,1,0],[-1,0,0]], dtype=complex)
-                    Di[i,j,:,:] = np.dot( Di[i,j,:,:],metric_tensor) 
+
                     """
                     _________________________________________________________
                     Vacuum interaction (No self-energy)
@@ -459,36 +458,36 @@ class ensemble(object):
                     
                     #-- Out Forward --
                     ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
-                    ddLeftF[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
+                    ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
                     ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
+                    *np.conjugate(self.ep[i])
                     
                     # -- Out Backward --
-                    ddLeftB[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
+                    ddLeftB[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.em[i])
                     ddLeftB[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
-                    ddLeftB[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
+                    ddLeftB[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *np.conjugate(self.ep[i])
                     
                     
                     #-- Out Forward -- (inelastic)
                     ddLeftFm[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
+                    *(self.ep[i])
                     ddLeftFm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ez[i])
+                    *(self.ez[i])
                     ddLeftFm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
+                    *(self.em[i])
                     
                     # -- Out Backward -- (inelastic)
-                    ddLeftBm[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.em[i])
-                    ddLeftBm[3*i+1] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ez[i])
-                    ddLeftBm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
-                    *np.conjugate(self.ep[i])
+                    ddLeftBm[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *(self.ep[i])
+                    ddLeftBm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *(self.ez[i])
+                    ddLeftBm[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                    *(self.em[i])
                     
            
                     for j in range(3):
@@ -497,7 +496,7 @@ class ensemble(object):
                         else:
                             a = 1
                             
-                        Sigmad[(i)*3+j,(i)*3+j] =0*0.5j 
+                        Sigmad[(i)*3+j,(i)*3+j] =0.5j 
                
                #distance dependance of dacay rate
                # there is no in/out gaussian chanel  
@@ -580,7 +579,6 @@ c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
 gd = 1.; #vacuum decay rate The only 
 lambd = 1; # atomic wavelength (lambdabar)
 k = 1/lambd
-lambd0 = (1.0025)*np.pi  /1.0685611328288454; # period of atomic chain
 a = 2*np.pi*200/850*lambd; # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica) 
 
@@ -597,8 +595,11 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-3, 3, 180)*gd
-step = lambd0
+freq = np.linspace(-10, 10, 180)*gd
+
+#empirical assumptions
+
+radiation_modes = 1. # = 1 iff assuming our model of radiation modes =0 else
 
 
 """
@@ -610,15 +611,15 @@ ______________________________________________________________________________
 
 if __name__ == '__main__':
     args = {
-            'nat':2, #number of atoms
+            'nat':100, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 1.5, # distance from fiber
-            'l0':lambd0, # mean distance between atoms (lambdabar units)
+            'l0':1.025, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
-            'ff': 0.1
+            'ff': 0.3
             }
             
     chi = ensemble(**args)
