@@ -29,6 +29,7 @@ from scipy.sparse import csr_matrix as csc
 
 import numpy as np
 from time import time
+
    
 
 def inverse(ResInv,ddRight):
@@ -182,9 +183,9 @@ class ensemble(object):
             self.ez = self.Ez(self.r)*(x-1j*y)/self.r
                 
             
-            
             self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
             -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
+            
             self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
             np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)*(1/np.sqrt(2))
         
@@ -196,12 +197,15 @@ class ensemble(object):
             
             self.index = np.argsort(self.rr)[:,1:nb+1]
             
+            #FREE_MEM
+            import gc
+            gc.collect()
+                        
             self.create_D_matrix()
             self.reflection_calc()
 
             print('Current ensemble calculation time is ',time()-t1,'s')
-            
-        
+ 
         
         def create_D_matrix(self):
             """
@@ -264,10 +268,10 @@ class ensemble(object):
             
             
             
-            D1 = radiation_modes*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
+            D1 = RADIATION_MODES_MODEL*kv*((1 - 1j*self.rr*kv - (self.rr*kv)**2)/ \
                 ((self.rr*kv + np.identity(nat))**3) \
                 *np.exp(1j*self.rr*kv)) *(np.ones(nat)-np.identity(nat))   
-            D2 = radiation_modes*-1*hbar*kv*((3 - 3*1j*self.rr*kv - (self.rr*kv)**2)/((((kv*self.rr+\
+            D2 = RADIATION_MODES_MODEL*-1*hbar*kv*((3 - 3*1j*self.rr*kv - (self.rr*kv)**2)/((((kv*self.rr+\
             np.identity(nat))**3))*np.exp(1j*kv*self.rr)))
             
             Dz = np.zeros([nat,nat], dtype=complex)
@@ -279,7 +283,7 @@ class ensemble(object):
                                 -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
                     self.rr[i,j])*(1/self.vg) + \
                                 1*2j*np.pi*kv*np.exp(1j*(abs(self.x0[i,j]))* \
-                    self.rr[i,j])*(radiation_modes / c)
+                    self.rr[i,j])*(RADIATION_MODES_MODEL / c)
 
 
             #Interaction part (and self-interaction for V-atom)
@@ -288,6 +292,9 @@ class ensemble(object):
             
             for i in range(nat):
                 for j in range(nat):
+                    
+                    if (i==j) and (self.typ == 'L'):
+                        continue
                     
                     """
                     ________________________________________________________
@@ -336,6 +343,7 @@ class ensemble(object):
                         
                     elif i<j:
                         Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
+                    
                     
                     
 
@@ -405,10 +413,9 @@ class ensemble(object):
                                 self.D[3*n1+i,3*n2+j] = 3*Di[n1,n2,i,j]
             else:
                 raise NameError('No such type')
-
-
             
-        def reflection_calc(self):
+        
+        def S_matrix_for_V(self):
             import sys
             nat=self.nat
             nb = self.nb
@@ -416,97 +423,178 @@ class ensemble(object):
             kv=1
             c=1
             
-
-            gd = 1+8*np.pi*k*(1/self.vg-0/c)*self.phib*self.phib*d00*d00
+            """
+            ________________________________________________________________
+            Definition of chanels of Scattering
+            ________________________________________________________________
+            """
             
-            if self.typ == 'L':
-                
-                ddLeftF = np.zeros(nat*3**nb, dtype=complex);
-                ddLeftB = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF = np.zeros(3*nat, dtype=complex);
+            ddLeftB = np.zeros(3*nat, dtype=complex);
+            ddLeftFm = np.zeros(3*nat, dtype=complex);
+            ddLeftBm = np.zeros(nat*3, dtype=complex);
+            ddRight = np.zeros(3*nat, dtype=complex); 
+            One = (np.identity(3*nat)) #Unit in V-atom
+            Sigmad = (np.identity(nat*3,dtype=complex))
+            for i in range(nat):
 
-                ddRight = np.zeros(nat*3**nb, dtype=complex);  
-                One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
-                Sigmad = (np.identity(nat*3**nb,dtype=complex))
-                
-                for i in range(nat):
-                    ddRight[(i+1)*3**nb-1] = 1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-                    ddLeftF[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-                    ddLeftB[(i+1)*3**nb-1] = -1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-                    for j in range(3**nb):
-                        Sigmad[(i)*3**nb+j,(i)*3**nb+j] = gd[i]*0.5j #distance dependance of dacay rate
-                    
-            elif self.typ == 'V':
-                
-                
-                
-                ddLeftF = np.zeros(3*nat, dtype=complex);
-                ddLeftB = np.zeros(3*nat, dtype=complex);
-                ddLeftFm = np.zeros(3*nat, dtype=complex);
-                ddLeftBm = np.zeros(nat*3, dtype=complex);
-                ddRight = np.zeros(3*nat, dtype=complex); 
-                One = (np.identity(3*nat)) #Unit in V-atom
-                Sigmad = (np.identity(nat*3,dtype=complex))
-                for i in range(nat):
-
-                    #--In-- chanel
-                    ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                #--In-- chanel
+                ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.em[i]
-                    ddRight[3*i+1] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                ddRight[3*i+1] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.ez[i] 
-                    ddRight[3*i+2] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
+                ddRight[3*i+2] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])  \
                     *self.ep[i]
                     
-                    #-- Out Forward --
-                    ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                #-- Out Forward --
+                ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.em[i])
-                    ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftF[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
-                    ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftF[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
                     
-                    # -- Out Backward --
-                    ddLeftB[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                # -- Out Backward --
+                ddLeftB[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.em[i])
-                    ddLeftB[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftB[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ez[i])
-                    ddLeftB[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftB[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *np.conjugate(self.ep[i])
                     
                     
-                    #-- Out Forward -- (inelastic)
-                    ddLeftFm[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                #-- Out Forward -- (inelastic)
+                ddLeftFm[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.ep[i])
-                    ddLeftFm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftFm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.ez[i])
-                    ddLeftFm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftFm[3*i+2] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.em[i])
                     
-                    # -- Out Backward -- (inelastic)
-                    ddLeftBm[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                # -- Out Backward -- (inelastic)
+                ddLeftBm[3*i] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.ep[i])
-                    ddLeftBm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftBm[3*i+1] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.ez[i])
-                    ddLeftBm[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
+                ddLeftBm[3*i+2] = -np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i]) \
                     *(self.em[i])
                     
            
-                    for j in range(3):
-                        if j == 1: 
-                            a = 1
-                        else:
-                            a = 1
-                            
-                        Sigmad[(i)*3+j,(i)*3+j] =0.5j 
-               
-               #distance dependance of dacay rate
-               # there is no in/out gaussian chanel  
-               # for i in range(nat):
-               #     ddRight[3*i] = np.sqrt(3)*1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-               #     ddLeftF[3*i] = np.sqrt(3)*-1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-               #     ddLeftB[3*i] = np.sqrt(3)*-1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.phibex[i]
-               #     for j in range(3):
-               #         Sigmad[(i)*3+j,(i)*3+j] =(1+0.5*(gd[i]-1))*0.5j #distance dependance of dacay rate
+                for j in range(3):
+                    Sigmad[(i)*3+j,(i)*3+j] = 0.5j  #Vacuum decay
 
+            """
+            ________________________________________________________________
+            Calculation of Scattering matrix elements 
+            ________________________________________________________________
+            """
+            for k in range(len(self.deltaP)):
+                
+                omega = self.deltaP[k]
+                    
+                Sigma = Sigmad+omega*One
+                V =  1*(- self.D/hbar/lambd/lambd )
+                ResInv = Sigma + V   
+                Resolventa =  np.dot(np.linalg.inv(ResInv),ddRight)
+                TF_ = np.dot(Resolventa,ddLeftF)*2*np.pi*hbar*kv
+                TB_ = np.dot(Resolventa,ddLeftB)*2*np.pi*hbar*kv
+                iTF_ = np.dot(Resolventa,ddLeftFm)*2*np.pi*hbar*kv
+                iTB_ = np.dot(Resolventa,ddLeftBm)*2*np.pi*hbar*kv
+                    
+                self.Transmittance[k] = 1.+(-1j/hbar*(TF_)/(self.vg))
+                self.Reflection[k] = (-1j/hbar*(TB_/(self.vg)))
+                    
+                    
+                self.iTransmittance[k] = (-1j/hbar*(iTF_)/(self.vg))                  
+                self.iReflection[k] =  (-1j/hbar*(iTB_/(self.vg)))
+                     
+                self.SideScattering[k] =1 - abs(self.Transmittance[k])**2-abs(self.Reflection[k])**2-\
+                                          abs(self.iTransmittance[k])**2-abs(self.iReflection[k])**2
+                                          
+                ist = 100*k / len(self.deltaP)
+                sys.stdout.write("\r%d%%" % ist)
+                sys.stdout.flush()
+                
+                
+
+            print('\n')
+            
+            
+        def S_matrix_for_Lambda(self):
+            import sys
+            nat=self.nat
+            nb = self.nb
+            k=1
+            kv=1
+            c=1
+            
+            #Decay rate for Lambda atom with respect of guided modes
+            gd = 8*d00*d00*np.pi*k*(1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + abs(self.ez)**2)  
+            
+            
+            """
+            ________________________________________________________________
+            Definition of chanels of Scattering
+            ________________________________________________________________
+            """
+            #Input
+            ddRight = np.zeros(nat*3**nb, dtype=complex);  
+                
+            #Output
+            #+1, +
+            ddLeftF_pp = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_pp = np.zeros(nat*3**nb, dtype=complex);
+                
+            #+1, -
+            ddLeftF_pm = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_pm = np.zeros(nat*3**nb, dtype=complex);
+                
+            #0, +
+            ddLeftF_0p = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_0p = np.zeros(nat*3**nb, dtype=complex);
+                
+            #0, -
+            ddLeftF_0m = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_0m = np.zeros(nat*3**nb, dtype=complex);
+                
+            #-1, +
+            ddLeftF_mp = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_mp = np.zeros(nat*3**nb, dtype=complex);
+                
+            #-1, -
+            ddLeftF_mm = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftB_mm = np.zeros(nat*3**nb, dtype=complex);
+  
+            One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
+            Sigmad = 0*(np.identity(nat*3**nb,dtype=complex))
+                
+            for i in range(nat):
+                    
+                ddRight[(i+1)*3**nb-1] =     1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
+                    
+                ddLeftF_pm[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
+                ddLeftB_pm[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
+                    
+                ddLeftF_pp[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+                ddLeftB_pp[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+                    
+                ddLeftF_0m[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ez[i])
+                ddLeftB_0m[(i+1)*3**nb-1] = -1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ez[i])
+                    
+                ddLeftF_0p[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ez[i]
+                ddLeftB_0p[(i+1)*3**nb-1] = -1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ez[i]
+                    
+                ddLeftF_mm[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ep[i])
+                ddLeftB_mm[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ep[i])
+                    
+                ddLeftF_mp[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
+                ddLeftB_mp[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
+                    
+                    
+                for j in range(3**nb):
+                    Sigmad[(i)*3**nb+j,(i)*3**nb+j] = gd[i]*0.5j #distance dependance of dacay rate
+                
+        
             for k in range(len(self.deltaP)):
                 
                 omega = self.deltaP[k]
@@ -514,35 +602,57 @@ class ensemble(object):
                 #V = lm(np.zeros([nat*3**nb,nat*3**nb], dtype = complex))
                 Sigma = Sigmad+omega*One
                 V =  1*(- self.D/hbar/lambd/lambd )
-                ResInv = Sigma + V   
+                ResInv = Sigma + V
+
+                
                 Resolventa =  np.dot(np.linalg.inv(ResInv),ddRight)
-                TF_ = np.dot(Resolventa,ddLeftF)*2*np.pi*hbar*kv
-                TB_ = np.dot(Resolventa,ddLeftB)*2*np.pi*hbar*kv
+                
+                TF_pm = np.dot(Resolventa,ddLeftF_pm)*2*np.pi*hbar*kv
+                TB_pm = np.dot(Resolventa,ddLeftB_pm)*2*np.pi*hbar*kv
+                
+                TF_pp = np.dot(Resolventa,ddLeftF_pp)*2*np.pi*hbar*kv
+                TB_pp = np.dot(Resolventa,ddLeftB_pp)*2*np.pi*hbar*kv
+                
+                TF_0m = np.dot(Resolventa,ddLeftF_0m)*2*np.pi*hbar*kv
+                TB_0m = np.dot(Resolventa,ddLeftB_0m)*2*np.pi*hbar*kv
+
+                TF_0p = np.dot(Resolventa,ddLeftF_0p)*2*np.pi*hbar*kv
+                TB_0p = np.dot(Resolventa,ddLeftB_0p)*2*np.pi*hbar*kv
+                
+                TF_mm = np.dot(Resolventa,ddLeftF_mm)*2*np.pi*hbar*kv
+                TB_mm = np.dot(Resolventa,ddLeftB_mm)*2*np.pi*hbar*kv
+                
+                TF_mp = np.dot(Resolventa,ddLeftF_mp)*2*np.pi*hbar*kv
+                TB_mp = np.dot(Resolventa,ddLeftB_mp)*2*np.pi*hbar*kv
                 
                 
-                self.Transmittance[k] = 1.+(-1j/hbar*(TF_)/(self.vg))
-                self.Reflection[k] = (-1j/hbar*(TB_/(self.vg)))
-                
-                #i prefix stands for inelastic scattering into fundamental mode
-                if self.typ == 'V':
+
                     
-                    
-                    iTF_ = np.dot(Resolventa,ddLeftFm)*2*np.pi*hbar*kv
-                    iTB_ = np.dot(Resolventa,ddLeftBm)*2*np.pi*hbar*kv
-                    
-                    self.iTransmittance[k] = (-1j/hbar*(iTF_)/(self.vg))                  
-                    self.iReflection[k] =  (-1j/hbar*(iTB_/(self.vg)))
+                self.Transmittance[k] = 1.+(-1j/hbar*(TF_pm)/(self.vg))
+                self.Reflection[k] = (-1j/hbar*(TB_pm/(self.vg)))
                      
-                    self.SideScattering[k] =1 - abs(self.Transmittance[k])**2-abs(self.Reflection[k])**2-\
-                                          abs(self.iTransmittance[k])**2-abs(self.iReflection[k])**2
-                
-                
+                self.SideScattering[k] = 1 - abs(self.Transmittance[k])**2 - abs(self.Reflection[k])**2 - \
+                                        (abs(TF_pp)**2 + abs(TB_pp)**2 + \
+                                         abs(TF_0m)**2 + abs(TB_0m)**2 + \
+                                         abs(TF_0p)**2 + abs(TB_0p)**2 + \
+                                         abs(TF_mm)**2 + abs(TB_mm)**2 + \
+                                         abs(TF_mp)**2 + abs(TB_mp)**2 ) *(1/hbar/self.vg)**2 
+                                          
                 ist = 100*k / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
                 sys.stdout.flush()
+                
             print('\n')
+              
             
-            
+        def reflection_calc(self):
+            if self.typ == 'V':
+                self.S_matrix_for_V()
+            elif self.typ == 'L':
+                self.S_matrix_for_Lambda()
+            else:
+                raise NameError('Wrong type of atom')
+                
             
         def visualize(self,addit='',save=True):
             import matplotlib.pyplot as plt
@@ -600,7 +710,7 @@ freq = np.linspace(-10, 10, 180)*gd
 
 #empirical assumptions
 
-radiation_modes = 1. # = 1 iff assuming our model of radiation modes =0 else
+RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
 
 
 """
@@ -613,14 +723,14 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':100, #number of atoms
-            'nb':0, #number of neighbours in raman chanel (for L-atom only)
+            'nat':2, #number of atoms
+            'nb':1, #number of neighbours in raman chanel (for L-atom only)
             's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
-            'd' : 1.5, # distance from fiber
-            'l0':1.025, # mean distance between atoms (in lambda_m /2 units)
+            'd' : 2.0, # distance from fiber
+            'l0':1.0025, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
-            'typ':'V',  # L or V for Lambda and V atom resp.
+            'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3
             
             }
