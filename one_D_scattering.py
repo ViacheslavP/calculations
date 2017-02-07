@@ -13,6 +13,8 @@ TODO:
   
   2. Sparse matrix structure. 
 
+
+Does this commited?
 """
 
 try:
@@ -487,7 +489,8 @@ class ensemble(object):
 
             """
             ________________________________________________________________
-            Calculation of Scattering matrix elements 
+            Calculation of Scattering matrix elements
+
             ________________________________________________________________
             """
             for k in range(len(self.deltaP)):
