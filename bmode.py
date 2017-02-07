@@ -93,11 +93,10 @@ class exact_mode(object):
   
         
         self.vg = sp.lambdify([x,_k],-fk/fo, modules=libraries)(self._beta,self._k)
-        
         self._ha = a*np.sqrt(self._n*self._n*self._k*self._k - self._beta*self._beta)
         self._qa = a*np.sqrt(self._beta*self._beta - self._k*self._k) 
         
-
+        
         """
         
         Mode components as it presented in Balykin's paper. 
@@ -144,7 +143,8 @@ class exact_mode(object):
 
 if __name__ == '__main__':
     args = {'k':1, 
-            'n':1.45,
+            'n':1.4469,
             'a': 2*np.pi*200/850
             }
     m = exact_mode(**args)
+    print(m._beta)

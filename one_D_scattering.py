@@ -145,7 +145,10 @@ class ensemble(object):
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
                 z = (np.arange(nat)+np.sort(np.random.randint(N-nat,size=nat)))*step
-    
+            elif s == '45':
+                x = self.d*a*np.ones(nat) /np.sqrt(2)
+                y = -self.d*a*np.ones(nat) / np.sqrt(2)
+                z = np.arange(nat)*step
             else:
                 raise NameError('Ensemble type not found')
             
@@ -346,9 +349,6 @@ class ensemble(object):
                     elif i<j:
                         Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
                     
-                    
-                    print(Di[i,i,:,:])
-
                     """
                     _________________________________________________________
                     Vacuum interaction (No self-energy)
@@ -377,7 +377,7 @@ class ensemble(object):
                     Di[i,j,2,2] += d01*d10*(D1[i,j]- \
                                             self.xm[i,j]*self.xp[i,j]*D2[i,j])
             
-            
+
             #Basis part              
             if self.typ == 'L': 
                 from itertools import product as combi
@@ -412,7 +412,7 @@ class ensemble(object):
                         
                         
                             for j in range(3):
-                                self.D[3*n1+i,3*n2+j] = 3*Di[n1,n2,i,j]
+                                self.D[3*n1+j,3*n2+i] = 3*Di[n1,n2,j,i]
             else:
                 raise NameError('No such type')
             
@@ -483,7 +483,7 @@ class ensemble(object):
                     
            
                 for j in range(3):
-                    Sigmad[(i)*3+j,(i)*3+j] = 0*0.5j  #Vacuum decay
+                    Sigmad[(i)*3+j,(i)*3+j] = 0.5j  #Vacuum decay
 
             """
             ________________________________________________________________
@@ -726,12 +726,12 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':1, #number of atoms
+            'nat':5, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
-            'l0':1.00, # mean distance between atoms (in lambda_m /2 units)
+            'l0':1.0025, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
@@ -741,5 +741,5 @@ if __name__ == '__main__':
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
-    print(chi.ep)
+
     
