@@ -8,19 +8,20 @@ n = 1.45 - the case that we only need to calculate
 
 TODO: 
 
-  1. Correct Green's function: principal value and V atom decay with only 4 modes presented loss -> 0!!
-      The last condition will guarantee faithfulness of all calculations performed for both Lambda and V!
-  
-  2. Sparse matrix structure. 
+1. EIT resonance: how to in theory (in non-orthogonal modes) and putting into programm
 
+2. Optimization for server calculations:
+       2.a filling matrices in cython and probably with the help of
+       openmp (pure c + openmp wrapping through cython) (perfomance) or numba (fastest way)(20% on laptop)
+       2.b numpy with mkl - parallel library! So, there in no change needed in energy denominator part
+3. Linear polarizations, probably for comparing with Julien
 
-Does this commited?
 """
 
 try:
     import mkl
-    mkl.set_num_threads(mkl.get_max_threads()+2)
-    mkl.service.set_num_threads(mkl.get_max_threads()+2)
+    mkl.set_num_threads(mkl.get_max_threads())
+    mkl.service.set_num_threads(mkl.get_max_threads())
     
 except ImportError:
     print('MKL does not installed. MKL dramatically improves calculation time')
@@ -28,7 +29,6 @@ except ImportError:
     
 from scipy.sparse import linalg as alg
 from scipy.sparse import csc_matrix as csc
-from scipy.sparse import lil_matrix as lm
 
 
 import numpy as np
@@ -68,7 +68,7 @@ class ensemble(object):
             self.epm = np.array([],dtype=complex)
             self.xm = np.zeros([nat,nat],dtype=complex)
             self.xp = np.array([[]],dtype=complex)
-            self.x0 = np.array([[]],dtype=complex)
+            self.x0 = np.array([[]],dtype=float)
             self.index = np.array([[]])
             self.D =  np.zeros([nat,nat],dtype=complex)
             self.Transmittance = np.zeros(len(deltaP),dtype=complex);
@@ -94,8 +94,8 @@ class ensemble(object):
             self.d = d
             self.nat = nat
             self.nb = nb
-            self.deltaP=deltaP
-            self.step=l0*np.pi/self.kv
+            self.deltaP = deltaP
+            self.step = l0 * np.pi / self.kv
             self.dens = dens
             self.typ = typ
             self.ff = ff
@@ -125,6 +125,7 @@ class ensemble(object):
                 y = 0.*np.ones(nat)
                 L = nat*self.step
                 z = np.random.rand(nat)*L
+
             elif s=='doublechain':
                 x = self.d*a*np.asarray([np.sign(i - nat/2) for i in range(nat)])
                 y = 0.*np.ones(nat)
@@ -187,7 +188,7 @@ class ensemble(object):
                 
             
             self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
-            -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
+            -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=float)
 
 
 
@@ -198,7 +199,7 @@ class ensemble(object):
             np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)*(1/np.sqrt(2))
         
             self.x0 = np.asarray([[(z[i]-z[j])/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)],dtype=complex)
+            np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)],dtype=float)
             
             self.index = np.argsort(self.rr)[:,1:nb+1]
             
@@ -339,15 +340,18 @@ class ensemble(object):
                     
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
-                    
-                    
-                    if i==j: #For doublechain it won't work!
+
+                    zi = float(self.x0[i,0]*self.rr[i,0])
+                    zj = float(self.x0[j,0]*self.rr[j,0])
+
+
+                    if abs(zi - zj) < 1e-6:
                         Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
-                    elif i>j:
+                    elif zi>zj:
                         Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
                         
-                    elif i<j:
+                    elif zi<zj:
                         Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
                     
                     """
@@ -731,12 +735,12 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':100, #number of atoms
+            'nat':200, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
-            'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
+            'dist':0.1,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
-            'l0':1.125, # mean distance between atoms (in lambda_m /2 units)
+            'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
