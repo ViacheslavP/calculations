@@ -19,15 +19,16 @@ Does this commited?
 
 try:
     import mkl
-    mkl.set_num_threads(mkl.get_max_threads())
-    mkl.service.set_num_threads(mkl.get_max_threads())
+    mkl.set_num_threads(mkl.get_max_threads()+2)
+    mkl.service.set_num_threads(mkl.get_max_threads()+2)
     
 except ImportError:
     print('MKL does not installed. MKL dramatically improves calculation time')
     
     
 from scipy.sparse import linalg as alg
-from scipy.sparse import csr_matrix as csc
+from scipy.sparse import csc_matrix as csc
+from scipy.sparse import lil_matrix as lm
 
 
 import numpy as np
@@ -164,11 +165,7 @@ class ensemble(object):
 
             t1 = time()
             
-            
-            ga = lambda x,w: 1/np.sqrt(np.pi*w**2)*np.exp(-x**2/w**2/2)    
-            self.phibex = -self.E(np.sqrt(x**2+y**2)) #for lambda-atom
-                
-            self.phib = ga(np.sqrt(x**2+y**2),self.wb)
+
                 
             """
             
@@ -185,13 +182,15 @@ class ensemble(object):
             
             self.em = -self.E(self.r)
                 
-            self.ep = -self.dE(self.r)*(x-1j*y)**2/self.r/self.r
-            self.ez = self.Ez(self.r)*(x-1j*y)/self.r
+            self.ep = PARAXIAL*-self.dE(self.r)*(x-1j*y)**2/self.r/self.r
+            self.ez = PARAXIAL*self.Ez(self.r)*(x-1j*y)/self.r
                 
             
             self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
             -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=complex)
-            
+
+
+
             self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
             np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)*(1/np.sqrt(2))
         
@@ -324,19 +323,19 @@ class ensemble(object):
                       
                     """
                     
-                    emfi  =                np.array([self.ep[i], self.ez[i], self.em[i]], dtype=complex)
-                    emfjc =  np.conjugate( np.array([self.ep[j], self.ez[j], self.em[j]], dtype=complex) )
+                    emfi  =  np.conjugate(  np.array([self.ep[i], self.ez[i], self.em[i]], dtype=complex))
+                    emfjc =                 np.array([self.ep[j], self.ez[j], self.em[j]], dtype=complex)
                     
-                    epfi  =  np.conjugate( np.array([self.em[i], self.ez[i], self.ep[i]], dtype=complex) )
-                    epfjc =                np.array([self.em[j], self.ez[j], self.ep[j]], dtype=complex)
+                    epfi  =                 np.array([self.em[i], self.ez[i], self.ep[i]], dtype=complex)
+                    epfjc =  np.conjugate(  np.array([self.em[j], self.ez[j], self.ep[j]], dtype=complex) )
                     
                     
                     
-                    embi  =                np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=complex)
-                    embjc =  np.conjugate( np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=complex) )
+                    embi  =  np.conjugate(  np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=complex))
+                    embjc =                 np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=complex)
                     
-                    epbi  =  np.conjugate( np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=complex) )
-                    epbjc =                np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=complex)
+                    epbi  =                 np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=complex)
+                    epbjc =  np.conjugate(  np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=complex) )
                     
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
@@ -346,10 +345,10 @@ class ensemble(object):
                         Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
                     elif i>j:
-                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00 
+                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
                         
                     elif i<j:
-                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
+                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
                     
                     """
                     _________________________________________________________
@@ -381,7 +380,8 @@ class ensemble(object):
             
 
             #Basis part              
-            if self.typ == 'L': 
+            if self.typ == 'L':
+
                 from itertools import product as combi
                 state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
                 st = np.ones([nat,nat,3**nb], dtype = int)*2
@@ -391,7 +391,7 @@ class ensemble(object):
                         for i in range(3**nb):
                             st[n1,n2,i] = state[i,k]
                         k+=1  
-                #self.D = lm((nat*3**nb,nat*3**nb),dtype=complex)                          
+                #self.D = lm((nat*3**nb,nat*3**nb),dtype=complex)
                 self.D = np.zeros([3**nb*nat,3**nb*nat],dtype=complex)
 
                 for n1 in range(nat):
@@ -485,7 +485,7 @@ class ensemble(object):
                     
            
                 for j in range(3):
-                    Sigmad[(i)*3+j,(i)*3+j] = 0.5j  #Vacuum decay
+                    Sigmad[(i)*3+j,(i)*3+j] = VACUUM_DECAY*0.5j  #Vacuum decay
 
             """
             ________________________________________________________________
@@ -500,7 +500,7 @@ class ensemble(object):
                 Sigma = Sigmad+omega*One
                 V =  1*(- self.D/hbar/lambd/lambd )
                 ResInv = Sigma + V   
-                Resolventa =  np.dot(np.linalg.inv(ResInv),ddRight)
+                Resolventa =  np.linalg.solve(ResInv,ddRight)
                 TF_ = np.dot(Resolventa,ddLeftF)*2*np.pi*hbar*kv
                 TB_ = np.dot(Resolventa,ddLeftB)*2*np.pi*hbar*kv
                 iTF_ = np.dot(Resolventa,ddLeftFm)*2*np.pi*hbar*kv
@@ -534,7 +534,7 @@ class ensemble(object):
             c=1
             
             #Decay rate for Lambda atom with respect of guided modes
-            gd = 1+8*d00*d00*np.pi*k*((1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + \
+            gd = VACUUM_DECAY*1+8*d00*d00*np.pi*k*((1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + \
                                                                             abs(self.ez)**2)  + RADIATION_MODES_MODEL/c * abs(self.ez)**2 )
             
             
@@ -606,12 +606,12 @@ class ensemble(object):
                 omega = self.deltaP[k]
                  
                 #V = lm(np.zeros([nat*3**nb,nat*3**nb], dtype = complex))
-                Sigma = Sigmad+omega*One
+                Sigma = csc(Sigmad+omega*One)
                 V =  1*(- self.D/hbar/lambd/lambd )
                 ResInv = Sigma + V
 
                 
-                Resolventa =  np.dot(np.linalg.inv(ResInv),ddRight)
+                Resolventa = np.linalg.solve(ResInv,ddRight)
                 
                 TF_pm = np.dot(Resolventa,ddLeftF_pm)*2*np.pi*hbar*kv
                 TB_pm = np.dot(Resolventa,ddLeftB_pm)*2*np.pi*hbar*kv
@@ -714,10 +714,11 @@ d1m0 = d01m;
 
 freq = np.linspace(-10, 10, 180)*gd
 
-#empirical assumptions
+#Validation (all = 1 iff ful theory)
 
 RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
-
+VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+PARAXIAL = 1. # = 0 iff paraxial, =1 iff full mode
 
 """
 ______________________________________________________________________________
@@ -726,15 +727,16 @@ ______________________________________________________________________________
 """
 
 
+
 if __name__ == '__main__':
     args = {
         
-            'nat':5, #number of atoms
+            'nat':100, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
-            'l0':1.0025, # mean distance between atoms (in lambda_m /2 units)
+            'l0':1.125, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
