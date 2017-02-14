@@ -59,24 +59,22 @@ class ensemble(object):
                      ):
                          
             self.rr = np.array([[]])
-            self.phib = np.array([],dtype=complex)
-            self.phibex = np.array([],dtype=complex)
-            self.ep = np.array([],dtype=complex)
-            self.em = np.array([],dtype=complex)
-            self.ez = np.array([],dtype=complex)
-            self.ezm = np.array([],dtype=complex)
-            self.epm = np.array([],dtype=complex)
-            self.xm = np.zeros([nat,nat],dtype=complex)
-            self.xp = np.array([[]],dtype=complex)
+            self.ep = np.array([],dtype=np.complex)
+            self.em = np.array([],dtype=np.complex)
+            self.ez = np.array([],dtype=np.complex)
+            self.ezm = np.array([],dtype=np.complex)
+            self.epm = np.array([],dtype=np.complex)
+            self.xm = np.zeros([nat,nat],dtype=np.complex)
+            self.xp = np.array([[]],dtype=np.complex)
             self.x0 = np.array([[]],dtype=float)
             self.index = np.array([[]])
-            self.D =  np.zeros([nat,nat],dtype=complex)
-            self.Transmittance = np.zeros(len(deltaP),dtype=complex);
-            self.Reflection = np.zeros(len(deltaP),dtype=complex);
-            self.iTransmittance = np.zeros(len(deltaP),dtype=complex);
-            self.iReflection = np.zeros(len(deltaP),dtype=complex);
+            self.D =  np.zeros([nat,nat],dtype=np.complex)
+            self.Transmittance = np.zeros(len(deltaP),dtype=np.complex);
+            self.Reflection = np.zeros(len(deltaP),dtype=np.complex);
+            self.iTransmittance = np.zeros(len(deltaP),dtype=np.complex);
+            self.iReflection = np.zeros(len(deltaP),dtype=np.complex);
             self.SideScattering = np.zeros(len(deltaP),dtype=float);
-            self.CrSec = np.zeros(len(deltaP),dtype=complex)
+            self.CrSec = np.zeros(len(deltaP),dtype=np.complex)
             self._foo = [[[]]]
             self.g = 1.06586/c;  #decay rate corrected in presence of a nanofiber, units of gamma 
             
@@ -87,7 +85,6 @@ class ensemble(object):
             self.E = m.E
             self.dE = m.dE
             self.Ez = m.Ez
-            self.wb = 4.
             
             self._dist = dist
             self._s = s
@@ -193,15 +190,15 @@ class ensemble(object):
 
 
             self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)*(1/np.sqrt(2))
+            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=np.complex)*(1/np.sqrt(2))
         
             self.xp = -np.asarray([[((x[i]-x[j])+1j*(y[i]-y[j]))/(self.rr[i,j]+ \
-            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=complex)*(1/np.sqrt(2))
+            np.identity(nat)[i,j]) for j in range(nat)]for i in range(nat)],dtype=np.complex)*(1/np.sqrt(2))
         
             self.x0 = np.asarray([[(z[i]-z[j])/(self.rr[i,j] + \
             np.identity(nat)[i,j]) for j in range(nat)] for i in range(nat)],dtype=float)
             
-            self.index = np.argsort(self.rr)[:,1:nb+1]
+            self.index = np.asarray(np.argsort(self.rr)[:,1:nb+1], dtype=np.int)
             
             #FREE_MEM
             import gc
@@ -215,7 +212,7 @@ class ensemble(object):
         
         def create_D_matrix(self):
             """
-            Method creates st-matrix, then creates D matrix and reshapes D 
+            Method creates D matrix and reshapes D
             matrix into 1+1 matrix with respect to selection rules
             
             
@@ -228,7 +225,11 @@ class ensemble(object):
             1 - atom is in state with m = 0,
             2 - atom is in state with m = 1. We assume that it t=0 all atoms in state
             with m = 1.
+
+            The Radiation Modes Model is just considering that radiation modes of fiber is vacuum modes
+             minus guided modes that propagates with speed of light and vacuum wavelength
             """
+
             nat = self.nat
             nb = self.nb
             kv = 1./lambd
@@ -280,7 +281,7 @@ class ensemble(object):
             D2 = RADIATION_MODES_MODEL*-1*hbar*kv*((3 - 3*1j*self.rr*kv - (self.rr*kv)**2)/((((kv*self.rr+\
             np.identity(nat))**3))*np.exp(1j*kv*self.rr)))
             
-            Dz = np.zeros([nat,nat], dtype=complex)
+            Dz = np.zeros([nat,nat], dtype=np.complex)
             
             for i in range(nat):
                 for j in range(nat):
@@ -293,9 +294,9 @@ class ensemble(object):
 
 
             #Interaction part (and self-interaction for V-atom)
-            Di = np.zeros([nat,nat,3,3], dtype = complex)
-            
-            
+            Di = np.zeros([nat,nat,3,3], dtype = np.complex)
+
+
             for i in range(nat):
                 for j in range(nat):
                     
@@ -324,19 +325,19 @@ class ensemble(object):
                       
                     """
                     
-                    emfi  =  np.conjugate(  np.array([self.ep[i], self.ez[i], self.em[i]], dtype=complex))
-                    emfjc =                 np.array([self.ep[j], self.ez[j], self.em[j]], dtype=complex)
+                    emfi  =  np.conjugate(  np.array([self.ep[i], self.ez[i], self.em[i]], dtype=np.complex))
+                    emfjc =                 np.array([self.ep[j], self.ez[j], self.em[j]], dtype=np.complex)
                     
-                    epfi  =                 np.array([self.em[i], self.ez[i], self.ep[i]], dtype=complex)
-                    epfjc =  np.conjugate(  np.array([self.em[j], self.ez[j], self.ep[j]], dtype=complex) )
+                    epfi  =                 np.array([self.em[i], self.ez[i], self.ep[i]], dtype=np.complex)
+                    epfjc =  np.conjugate(  np.array([self.em[j], self.ez[j], self.ep[j]], dtype=np.complex) )
                     
                     
                     
-                    embi  =  np.conjugate(  np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=complex))
-                    embjc =                 np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=complex)
+                    embi  =  np.conjugate(  np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=np.complex))
+                    embjc =                 np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=np.complex)
                     
-                    epbi  =                 np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=complex)
-                    epbjc =  np.conjugate(  np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=complex) )
+                    epbi  =                 np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=np.complex)
+                    epbjc =  np.conjugate(  np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=np.complex) )
                     
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
@@ -381,11 +382,12 @@ class ensemble(object):
                                             
                     Di[i,j,2,2] += d01*d10*(D1[i,j]- \
                                             self.xm[i,j]*self.xp[i,j]*D2[i,j])
-            
 
             #Basis part              
             if self.typ == 'L':
-
+                from sigmaMatrix import returnForLambda
+                self.D = returnForLambda(Di, np.array(self.index, dtype=np.int), nb)
+                """
                 from itertools import product as combi
                 state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
                 st = np.ones([nat,nat,3**nb], dtype = int)*2
@@ -395,8 +397,8 @@ class ensemble(object):
                         for i in range(3**nb):
                             st[n1,n2,i] = state[i,k]
                         k+=1  
-                #self.D = lm((nat*3**nb,nat*3**nb),dtype=complex)
-                self.D = np.zeros([3**nb*nat,3**nb*nat],dtype=complex)
+                #self.D = lm((nat*3**nb,nat*3**nb),dtype=np.complex)
+                self.D = np.zeros([3**nb*nat,3**nb*nat],dtype=np.complex)
 
                 for n1 in range(nat):
                     for n2 in range(nat):#choose initial excited atom
@@ -407,10 +409,19 @@ class ensemble(object):
                                 if foo(n1,n2,i,j):  #if transition is possible then make assigment
                                     self.D[n1*3**nb+i,n2*3**nb+j] =  \
                                     Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
+                """
 
                                     
             elif self.typ == 'V':
-                self.D = np.zeros([3*nat,3*nat],dtype=complex)
+
+                from sigmaMatrix import returnForV
+                self.D = returnForV(Di)
+
+                """
+                Pure python realisation:
+                UNCOMMENT IF sigmaMatrix.pyx NOT COMPILED!
+
+                self.D = np.zeros([3*nat,3*nat],dtype=np.complex)
                 for n1 in range(nat): #initial excited
                     
                     for n2 in range(nat):#final excited
@@ -419,6 +430,8 @@ class ensemble(object):
                         
                             for j in range(3):
                                 self.D[3*n1+j,3*n2+i] = 3*Di[n1,n2,j,i]
+                """
+
             else:
                 raise NameError('No such type')
             
@@ -433,17 +446,17 @@ class ensemble(object):
             
             """
             ________________________________________________________________
-            Definition of chanels of Scattering
+            Definition of channels of Scattering
             ________________________________________________________________
             """
             
-            ddLeftF = np.zeros(3*nat, dtype=complex);
-            ddLeftB = np.zeros(3*nat, dtype=complex);
-            ddLeftFm = np.zeros(3*nat, dtype=complex);
-            ddLeftBm = np.zeros(nat*3, dtype=complex);
-            ddRight = np.zeros(3*nat, dtype=complex); 
+            ddLeftF = np.zeros(3*nat, dtype=np.complex);
+            ddLeftB = np.zeros(3*nat, dtype=np.complex);
+            ddLeftFm = np.zeros(3*nat, dtype=np.complex);
+            ddLeftBm = np.zeros(nat*3, dtype=np.complex);
+            ddRight = np.zeros(3*nat, dtype=np.complex); 
             One = (np.identity(3*nat)) #Unit in V-atom
-            Sigmad = (np.identity(nat*3,dtype=complex))
+            Sigmad = (np.identity(nat*3,dtype=np.complex))
             for i in range(nat):
 
                 #--In-- chanel
@@ -544,39 +557,39 @@ class ensemble(object):
             
             """
             ________________________________________________________________
-            Definition of chanels of Scattering
+            Definition of channels of Scattering
             ________________________________________________________________
             """
             #Input
-            ddRight = np.zeros(nat*3**nb, dtype=complex);  
+            ddRight = np.zeros(nat*3**nb, dtype=np.complex);  
                 
             #Output
             #+1, +
-            ddLeftF_pp = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_pp = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_pp = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_pp = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #+1, -
-            ddLeftF_pm = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_pm = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_pm = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_pm = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #0, +
-            ddLeftF_0p = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_0p = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_0p = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_0p = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #0, -
-            ddLeftF_0m = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_0m = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_0m = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_0m = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #-1, +
-            ddLeftF_mp = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_mp = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_mp = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_mp = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #-1, -
-            ddLeftF_mm = np.zeros(nat*3**nb, dtype=complex);
-            ddLeftB_mm = np.zeros(nat*3**nb, dtype=complex);
+            ddLeftF_mm = np.zeros(nat*3**nb, dtype=np.complex);
+            ddLeftB_mm = np.zeros(nat*3**nb, dtype=np.complex);
   
             One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
-            Sigmad = 0*(np.identity(nat*3**nb,dtype=complex))
+            Sigmad = 0*(np.identity(nat*3**nb,dtype=np.complex))
                 
             for i in range(nat):
                     
@@ -609,7 +622,7 @@ class ensemble(object):
                 
                 omega = self.deltaP[k]
                  
-                #V = lm(np.zeros([nat*3**nb,nat*3**nb], dtype = complex))
+                #V = lm(np.zeros([nat*3**nb,nat*3**nb], dtype = np.complex))
                 Sigma = csc(Sigmad+omega*One)
                 V =  1*(- self.D/hbar/lambd/lambd )
                 ResInv = Sigma + V
@@ -721,7 +734,7 @@ freq = np.linspace(-10, 10, 180)*gd
 #Validation (all = 1 iff ful theory)
 
 RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
-VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+VACUUM_DECAY = 0. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1. # = 0 iff paraxial, =1 iff full mode
 
 """
@@ -735,14 +748,14 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':200, #number of atoms
-            'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'ff_chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            'nat':5, #number of atoms
+            'nb':4, #number of neighbours in raman chanel (for L-atom only)
+            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.1,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
             'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
-            'typ':'V',  # L or V for Lambda and V atom resp.
+            'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3
             
             }
