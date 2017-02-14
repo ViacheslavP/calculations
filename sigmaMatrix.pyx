@@ -56,8 +56,8 @@ cdef np.ndarray[DTYPE_t, ndim=2] creturnForLambda(np.ndarray[DTYPE_t, ndim=4] Di
     cdef int clock = 1
     for n1 in range(nat): #initial excited
         for n2 in range(nat):#final excited
-                for i in range(3):
-                     for j in range(3):
+                for i in range(3**nb):
+                     for j in range(3**nb):
                         clock = 1
                         for ki1 in np.append(index[n1,:],index[n2,:]):
 

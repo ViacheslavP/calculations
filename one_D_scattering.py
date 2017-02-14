@@ -748,8 +748,8 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':5, #number of atoms
-            'nb':4, #number of neighbours in raman chanel (for L-atom only)
+            'nat':7, #number of atoms
+            'nb':6, #number of neighbours in raman chanel (for L-atom only)
             's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.1,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
