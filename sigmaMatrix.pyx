@@ -34,6 +34,13 @@ _______________________________________________________________________________
 _______________________________________________________________________________
 """
 
+cdef np.ndarray[DINT_t, ndim=2] creturnStates(nb):
+    cdef int i,j
+    cdef result = np.zeros([3**nb, nb], dtype = DINT)
+    for i in range(3**nb):
+        for j in range(nb):
+            result[i,j] = i // 3**j % 3
+    return result
 
 
 cdef np.ndarray[DTYPE_t, ndim=2] creturnForLambda(np.ndarray[DTYPE_t, ndim=4] Di, int nat, int nb,  np.ndarray[DINT_t, ndim=2] index):
@@ -41,9 +48,8 @@ cdef np.ndarray[DTYPE_t, ndim=2] creturnForLambda(np.ndarray[DTYPE_t, ndim=4] Di
     cdef np.ndarray[DINT_t, ndim=3] st = 2*np.ones([nat, nat, 3**nb],dtype=DINT)
 
 
+    cdef np.ndarray[DINT_t, ndim=2] state = creturnStates(nb)
 
-    from itertools import product as combi
-    cdef np.ndarray[DINT_t, ndim=2] state = np.asarray([ij for ij in combi(range(3),repeat=nb)], dtype=DINT)
 
     cdef int n1,n2,i,j,k,ki1
     for n1 in range(nat):

@@ -10,11 +10,7 @@ TODO:
 
 1. EIT resonance: how to in theory (in non-orthogonal modes) and putting into programm
 
-2. Optimization for server calculations:
-       2.a filling matrices in cython and probably with the help of
-       openmp (pure c + openmp wrapping through cython) (perfomance) or numba (fastest way)(20% on laptop)
-       2.b numpy with mkl - parallel library! So, there in no change needed in energy denominator part
-3. Linear polarizations, probably for comparing with Julien
+2. Linear polarizations, probably for comparing with Julien
 
 """
 
@@ -633,20 +629,20 @@ class ensemble(object):
                 TF_pm = np.dot(Resolventa,ddLeftF_pm)*2*np.pi*hbar*kv
                 TB_pm = np.dot(Resolventa,ddLeftB_pm)*2*np.pi*hbar*kv
                 
-                TF_pp = np.dot(Resolventa,ddLeftF_pp)*2*np.pi*hbar*kv
-                TB_pp = np.dot(Resolventa,ddLeftB_pp)*2*np.pi*hbar*kv
+                TF_pp = np.dot(Resolventa,ddLeftF_pp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
+                TB_pp = np.dot(Resolventa,ddLeftB_pp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
                 
-                TF_0m = np.dot(Resolventa,ddLeftF_0m)*2*np.pi*hbar*kv
-                TB_0m = np.dot(Resolventa,ddLeftB_0m)*2*np.pi*hbar*kv
+                TF_0m = np.dot(Resolventa,ddLeftF_0m)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
+                TB_0m = np.dot(Resolventa,ddLeftB_0m)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
 
-                TF_0p = np.dot(Resolventa,ddLeftF_0p)*2*np.pi*hbar*kv
-                TB_0p = np.dot(Resolventa,ddLeftB_0p)*2*np.pi*hbar*kv
+                TF_0p = np.dot(Resolventa,ddLeftF_0p)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
+                TB_0p = np.dot(Resolventa,ddLeftB_0p)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
                 
-                TF_mm = np.dot(Resolventa,ddLeftF_mm)*2*np.pi*hbar*kv
-                TB_mm = np.dot(Resolventa,ddLeftB_mm)*2*np.pi*hbar*kv
+                TF_mm = np.dot(Resolventa,ddLeftF_mm)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
+                TB_mm = np.dot(Resolventa,ddLeftB_mm)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
                 
-                TF_mp = np.dot(Resolventa,ddLeftF_mp)*2*np.pi*hbar*kv
-                TB_mp = np.dot(Resolventa,ddLeftB_mp)*2*np.pi*hbar*kv
+                TF_mp = np.dot(Resolventa,ddLeftF_mp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
+                TB_mp = np.dot(Resolventa,ddLeftB_mp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
                 
                 
 
@@ -688,15 +684,16 @@ class ensemble(object):
             plt.savefig('TnR.png',dpi=700)
             plt.show()
             plt.clf()
-            
-            plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
-            plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
-            plt.legend()
-            plt.xlabel('Detuning, $\gamma$',fontsize=16)
-            plt.ylabel('R,T',fontsize=16)
-            plt.savefig('TnR_rot.png',dpi=700)
-            plt.show()
-            plt.clf()
+
+            if self.typ == 'V':
+                plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
+                plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
+                plt.legend()
+                plt.xlabel('Detuning, $\gamma$',fontsize=16)
+                plt.ylabel('R,T',fontsize=16)
+                plt.savefig('TnR_rot.png',dpi=700)
+                plt.show()
+                plt.clf()
             
             plt.xlabel('Detuning, $\gamma$')
             plt.ylabel('R,T')
@@ -733,10 +730,10 @@ freq = np.linspace(-10, 10, 180)*gd
 
 #Validation (all = 1 iff ful theory)
 
-RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
-VACUUM_DECAY = 0. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+RADIATION_MODES_MODEL = 1. # = 1 iff assuming our model of radiation modes =0 else
+VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1. # = 0 iff paraxial, =1 iff full mode
-
+VERIFICATION_LAMBDA = 0.
 """
 ______________________________________________________________________________
 Executing program
@@ -748,10 +745,10 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':7, #number of atoms
-            'nb':6, #number of neighbours in raman chanel (for L-atom only)
-            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
-            'dist':0.1,  # sigma for displacement (choose 'chain' for gauss displacement.)
+            'nat':100, #number of atoms
+            'nb':3, #number of neighbours in raman chanel (for L-atom only)
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
             'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
