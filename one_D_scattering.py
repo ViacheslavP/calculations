@@ -200,12 +200,13 @@ class ensemble(object):
             import gc
             gc.collect()
                         
-            self.create_D_matrix()
+            self.create_D_matrix
             self.reflection_calc()
 
             print('Current ensemble calculation time is ',time()-t1,'s')
  
         
+        @property
         def create_D_matrix(self):
             """
             Method creates D matrix and reshapes D
@@ -256,6 +257,7 @@ class ensemble(object):
             """
             Selecting neighbours only (experimental idea for subtractions)
             """
+
             L = 3 * np.pi / 1
             def foo2(a):
                 if a > L:
@@ -343,7 +345,7 @@ class ensemble(object):
 
 
                     if abs(zi - zj) < 1e-6:
-                        Di[i,i,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
+                        Di[i,j,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
                         
                     elif zi>zj:
                         Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
@@ -379,54 +381,55 @@ class ensemble(object):
                     Di[i,j,2,2] += d01*d10*(D1[i,j]- \
                                             self.xm[i,j]*self.xp[i,j]*D2[i,j])
 
-            #Basis part              
+            #
             if self.typ == 'L':
-                from sigmaMatrix import returnForLambda
-                self.D = returnForLambda(Di, np.array(self.index, dtype=np.int), nb)
-                """
-                from itertools import product as combi
-                state = np.asarray([i for i in combi(range(3),repeat=nb)]) 
-                st = np.ones([nat,nat,3**nb], dtype = int)*2
-                for n1 in range(nat):
-                    k=0
-                    for n2 in np.sort(self.index[n1,:]):
-                        for i in range(3**nb):
-                            st[n1,n2,i] = state[i,k]
-                        k+=1  
-                #self.D = lm((nat*3**nb,nat*3**nb),dtype=np.complex)
-                self.D = np.zeros([3**nb*nat,3**nb*nat],dtype=np.complex)
+                try:
+                    from sigmaMatrix import returnForLambda
+                    self.D = returnForLambda(Di, np.array(self.index, dtype=np.int), nb)
+                except:
+                    print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
 
-                for n1 in range(nat):
-                    for n2 in range(nat):#choose initial excited atom
-                        for i in range(3**nb):  #select initial excited atom environment
-                        #choose final excited or np.sort(self.index[n1,:]): if massive photon
+
+                    from itertools import product as combi
+                    state = np.asarray([i for i in combi(range(3),repeat=nb)])
+                    st = np.ones([nat,nat,3**nb], dtype = int)*2
+                    for n1 in range(nat):
+                        k=0
+                        for n2 in np.sort(self.index[n1,:]):
+                            for i in range(3**nb):
+                                st[n1,n2,i] = state[i,k]
+                            k+=1
+
+                    self.D = np.zeros([3**nb*nat,3**nb*nat],dtype=np.complex)
+
+                    for n1 in range(nat):
+                        for n2 in range(nat):#choose initial excited atom
+                            for i in range(3**nb):  #select initial excited atom environment
+                            #choose final excited or np.sort(self.index[n1,:]): if massive photon
                               
-                            for j in range(3**nb):      #select final excited environment
-                                if foo(n1,n2,i,j):  #if transition is possible then make assigment
-                                    self.D[n1*3**nb+i,n2*3**nb+j] =  \
-                                    Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
-                """
+                                for j in range(3**nb):      #select final excited environment
+                                    if foo(n1,n2,i,j):  #if transition is possible then make assigment
+                                        self.D[n1*3**nb+i,n2*3**nb+j] =  \
+                                        Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
 
-                                    
             elif self.typ == 'V':
+                print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
 
-                from sigmaMatrix import returnForV
-                self.D = returnForV(Di)
+                try:
 
-                """
-                Pure python realisation:
-                UNCOMMENT IF sigmaMatrix.pyx NOT COMPILED!
+                    from sigmaMatrix import returnForV
+                    self.D = returnForV(Di)
 
-                self.D = np.zeros([3*nat,3*nat],dtype=np.complex)
-                for n1 in range(nat): #initial excited
+                except:
+                    self.D = np.zeros([3*nat,3*nat],dtype=np.complex)
+                    for n1 in range(nat): #initial excited
                     
-                    for n2 in range(nat):#final excited
-                        for i in range(3):
+                        for n2 in range(nat):#final excited
+                            for i in range(3):
                         
                         
-                            for j in range(3):
-                                self.D[3*n1+j,3*n2+i] = 3*Di[n1,n2,j,i]
-                """
+                                for j in range(3):
+                                    self.D[3*n1+j,3*n2+i] = 3*Di[n1,n2,j,i]
 
             else:
                 raise NameError('No such type')
@@ -760,5 +763,3 @@ if __name__ == '__main__':
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
-
-    
