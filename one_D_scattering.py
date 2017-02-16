@@ -389,7 +389,6 @@ class ensemble(object):
                 except:
                     print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
 
-
                     from itertools import product as combi
                     state = np.asarray([i for i in combi(range(3),repeat=nb)])
                     st = np.ones([nat,nat,3**nb], dtype = int)*2
@@ -413,14 +412,14 @@ class ensemble(object):
                                         Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
 
             elif self.typ == 'V':
-                print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
 
                 try:
-
                     from sigmaMatrix import returnForV
                     self.D = returnForV(Di)
 
                 except:
+                    print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
+
                     self.D = np.zeros([3*nat,3*nat],dtype=np.complex)
                     for n1 in range(nat): #initial excited
                     
@@ -731,7 +730,7 @@ d1m0 = d01m;
 
 freq = np.linspace(-10, 10, 180)*gd
 
-#Validation (all = 1 iff ful theory)
+#Validation (all = 1 iff ful theory, except VERIFICATION_LAMBDA)
 
 RADIATION_MODES_MODEL = 1. # = 1 iff assuming our model of radiation modes =0 else
 VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
@@ -748,8 +747,8 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':100, #number of atoms
-            'nb':3, #number of neighbours in raman chanel (for L-atom only)
+            'nat':6, #number of atoms
+            'nb':5, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
