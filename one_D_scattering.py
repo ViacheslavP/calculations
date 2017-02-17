@@ -64,7 +64,6 @@ class ensemble(object):
             self.xp = np.array([[]],dtype=np.complex)
             self.x0 = np.array([[]],dtype=float)
             self.index = np.array([[]])
-            self.D =  np.zeros([nat,nat],dtype=np.complex)
             self.Transmittance = np.zeros(len(deltaP),dtype=np.complex);
             self.Reflection = np.zeros(len(deltaP),dtype=np.complex);
             self.iTransmittance = np.zeros(len(deltaP),dtype=np.complex);
@@ -200,13 +199,12 @@ class ensemble(object):
             import gc
             gc.collect()
                         
-            self.create_D_matrix
+            self.create_D_matrix()
             self.reflection_calc()
 
             print('Current ensemble calculation time is ',time()-t1,'s')
  
-        
-        @property
+
         def create_D_matrix(self):
             """
             Method creates D matrix and reshapes D
@@ -381,9 +379,10 @@ class ensemble(object):
                     Di[i,j,2,2] += d01*d10*(D1[i,j]- \
                                             self.xm[i,j]*self.xp[i,j]*D2[i,j])
 
-            #
+
             if self.typ == 'L':
                 try:
+
                     from sigmaMatrix import returnForLambda
                     self.D = returnForLambda(Di, np.array(self.index, dtype=np.int), nb)
                 except:
@@ -621,8 +620,9 @@ class ensemble(object):
                 omega = self.deltaP[k]
                  
                 #V = lm(np.zeros([nat*3**nb,nat*3**nb], dtype = np.complex))
-                Sigma = csc(Sigmad+omega*One)
+                Sigma = (Sigmad+omega*One)
                 V =  1*(- self.D/hbar/lambd/lambd )
+
                 ResInv = Sigma + V
 
                 
@@ -732,7 +732,7 @@ freq = np.linspace(-10, 10, 180)*gd
 
 #Validation (all = 1 iff ful theory, except VERIFICATION_LAMBDA)
 
-RADIATION_MODES_MODEL = 1. # = 1 iff assuming our model of radiation modes =0 else
+RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
 VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1. # = 0 iff paraxial, =1 iff full mode
 VERIFICATION_LAMBDA = 0.
@@ -748,13 +748,13 @@ if __name__ == '__main__':
     args = {
         
             'nat':6, #number of atoms
-            'nb':5, #number of neighbours in raman chanel (for L-atom only)
+            'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
             'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
-            'typ':'L',  # L or V for Lambda and V atom resp.
+            'typ':'V',  # L or V for Lambda and V atom resp.
             'ff': 0.3
             
             }

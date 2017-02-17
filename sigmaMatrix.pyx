@@ -77,7 +77,7 @@ cdef np.ndarray[DTYPE_t, ndim=2] creturnForLambda(np.ndarray[DTYPE_t, ndim=4] Di
     return D
 
 def returnForLambda(np.ndarray[DTYPE_t, ndim=4] Di, np.ndarray[DINT_t, ndim=2] index, int nb):
-    cdef int n = Di.shape[0]
-    return creturnForLambda(Di, n, nb, index)
+    cdef int nn = Di.shape[0]
+    return creturnForLambda(Di, nn, nb, index)
 
 
