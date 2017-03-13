@@ -128,23 +128,28 @@ class exact_mode(object):
         zfout = lambda r :kn(1,qa * r /a) / kn (1,qa)
         
         Ez = lambda r: np.piecewise(r, [r>=a,r<a], [zfout,zfin])
+
+
         
         
-        
-        _fooint = lambda r: r* (abs(E(r))**2 + abs(dE(r))**2 + abs(Ez(r))**2)
-        _norm = np.sqrt(quad(_fooint,0,np.inf)[0]*2*np.pi)
-        
+        _fooint = lambda r:  r*(abs(E(r))**2 + abs(dE(r))**2 + abs(Ez(r))**2)
+        _norm = np.sqrt((quad(_fooint,a,np.inf)[0]+n*n*quad(_fooint,0,a)[0])*2*np.pi)
+
+        print('A=', 1/_norm)
         self.E = lambda r: -1j*E(r) / _norm
         self.dE = lambda r: 1j*dE(r) /_norm
         self.Ez = lambda r: Ez(r)/_norm
         
         self.Ephi = lambda r: -1j / np.sqrt(2) * (self.E(r) + self.dE(r))
-        self.Er = lambda r: -1 / np.sqrt(2) * (self.E(r) - self.dE(r))        
+        self.Er = lambda r: -1 / np.sqrt(2) * (self.E(r) - self.dE(r))
+
+
+
 
 if __name__ == '__main__':
     args = {'k':1, 
-            'n':1.4469,
-            'a': 2*np.pi*200/850
+            'n':1.45,
+            'a': 2*np.pi*200/780
             }
     m = exact_mode(**args)
-    print(m._beta)
+

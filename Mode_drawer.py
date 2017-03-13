@@ -41,6 +41,23 @@ for Atom, a in atoms.items():
     f_sph.close()
     
 print('Written')
+from matplotlib import pyplot as plt
+args = {'k':1,
+        'n':1.45,
+        'a': 2*np.pi*200/850
+       }
+m = exact_mode(**args)
+x = np.linspace(0,4, ndots)*2*np.pi*200/780
+xin = np.linspace(0,0.95, ndots)*2*np.pi*200/780
+xout = np.linspace(1.05,4, ndots)*2*np.pi*200/780
+
+plt.plot(xin/a, abs(m.Er(xin)), 'r', label = '$|E_r|$', lw =1.5)
+plt.plot(xout/a, abs(m.Er(xout)), 'r', lw =1.5)
+plt.plot(x/a, abs(m.Ephi(x)), 'b',  label = '$|E_{\phi}|$', lw=1.5)
+plt.plot(x/a, abs(m.Ez(x)), 'g', label = '$|E_z|$', lw = 1.5)
+plt.legend(frameon=False)
+plt.savefig('Modes.svg')
+plt.show()
         
     
     

@@ -256,18 +256,20 @@ class ensemble(object):
             Selecting neighbours only (experimental idea for subtractions)
             """
 
-            L = 3 * np.pi / 1
-            def foo2(a):
-                if a > L:
+            L = 2 * np.pi / self.kv
+            def foo2(na):
+                if na > L:
                     return 0
                 else:
                     return 1
             neigh = np.zeros([nat,nat])
+
             for i in range(nat):
                 for j in range(nat):
                     neigh[i,j] = foo2(self.rr[i,j])
 
             kv = 1
+            print(neigh)
             
             
             
@@ -278,15 +280,16 @@ class ensemble(object):
             np.identity(nat))**3))*np.exp(1j*kv*self.rr)))
             
             Dz = np.zeros([nat,nat], dtype=np.complex)
+            DzSub = np.zeros([nat,nat], dtype=np.complex)
             
             for i in range(nat):
                 for j in range(nat):
     
                     Dz[i,j] =   \
                                 -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
-                    self.rr[i,j])*(1/self.vg) + \
-                                1*2j*np.pi*kv*np.exp(1j*(abs(self.x0[i,j]))* \
-                    self.rr[i,j])*(RADIATION_MODES_MODEL / c)
+                    self.rr[i,j])*(1/self.vg)
+                    DzSub[i,j] = -1*2j*np.pi*kv*np.exp(1j*(abs(self.x0[i,j]))* \
+                    self.rr[i,j])*(RADIATION_MODES_MODEL*neigh[i,j] / c)
 
 
             #Interaction part (and self-interaction for V-atom)
@@ -334,7 +337,17 @@ class ensemble(object):
                     
                     epbi  =                 np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=np.complex)
                     epbjc =  np.conjugate(  np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=np.complex) )
-                    
+
+
+                    emfjcSub = np.array([0, 0, self.em[j]], dtype=np.complex)
+                    epfjcSub = np.conjugate(np.array([self.em[j], 0, 0], dtype=np.complex))
+
+                    embjcSub = np.array([0, 0, -self.em[j]], dtype=np.complex)
+                    epbjcSub = np.conjugate(np.array([-self.em[j], 0, 0], dtype=np.complex))
+
+                    forwardSub = np.outer(emfi, emfjcSub) + np.outer(epfi, epfjcSub)
+                    backwardSub = np.outer(embi, embjcSub) + np.outer(epbi, epbjcSub)
+
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
 
@@ -343,13 +356,13 @@ class ensemble(object):
 
 
                     if abs(zi - zj) < 1e-6:
-                        Di[i,j,:,:] = 0.5 * (forward + backward) * Dz[i,i] * d00*d00 #Principal value of integaral: it's corresponds with Fermi's golden rule!
+                        Di[i,j,:,:] = 0.5 * d00*d00*((forward + backward) * Dz[i,i] - (forwardSub+backwardSub)*DzSub[i,j])
                         
                     elif zi>zj:
-                        Di[i,j,:,:] = forward * Dz[i,j] * d00*d00
+                        Di[i,j,:,:] = (forward * Dz[i,j] - forwardSub*DzSub[i,j]) * d00*d00
                         
                     elif zi<zj:
-                        Di[i,j,:,:] = backward * Dz[i,j] * d00*d00
+                        Di[i,j,:,:] = (backward * Dz[i,j] - backwardSub*DzSub[i,j]) * d00*d00
                     
                     """
                     _________________________________________________________
@@ -549,9 +562,10 @@ class ensemble(object):
             
             #Decay rate for Lambda atom with respect of guided modes
             gd = VACUUM_DECAY*1+8*d00*d00*np.pi*k*((1/self.vg - RADIATION_MODES_MODEL/c)*(abs(self.em)**2 + abs(self.ep)**2 + \
-                                                                            abs(self.ez)**2)  + RADIATION_MODES_MODEL/c * abs(self.ez)**2 )
-            
-            
+                                                    abs(self.ez)**2)  + FIRST*RADIATION_MODES_MODEL/c * abs(self.ez)**2 \
+                                                                      + SECOND*RADIATION_MODES_MODEL/c * abs(self.ep)**2 )
+
+
             """
             ________________________________________________________________
             Definition of channels of Scattering
@@ -613,8 +627,11 @@ class ensemble(object):
                     
                 for j in range(3**nb):
                     Sigmad[(i)*3**nb+j,(i)*3**nb+j] = gd[i]*0.5j #distance dependance of dacay rate
-                
-        
+
+            if VERIFICATION_LAMBDA == 1:
+                self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
+                self.fullReflection = np.zeros(len(self.deltaP),dtype=float)
+
             for k in range(len(self.deltaP)):
                 
                 omega = self.deltaP[k]
@@ -657,7 +674,21 @@ class ensemble(object):
                                          abs(TF_0m)**2 + abs(TB_0m)**2 + \
                                          abs(TF_0p)**2 + abs(TB_0p)**2 + \
                                          abs(TF_mm)**2 + abs(TB_mm)**2 + \
-                                         abs(TF_mp)**2 + abs(TB_mp)**2 ) *(1/hbar/self.vg)**2 
+                                         abs(TF_mp)**2 + abs(TB_mp)**2 ) *(1/hbar/self.vg)**2
+
+                if VERIFICATION_LAMBDA == 1:
+                    self.fullTransmittance[k] = abs(self.Transmittance[k])**2 +\
+                                        (abs(TF_pp)**2 + \
+                                         abs(TF_0m)**2 + \
+                                         abs(TF_0p)**2 + \
+                                         abs(TF_mm)**2 +  \
+                                         abs(TF_mp)**2 ) *(1/hbar/self.vg)**2
+                    self.fullReflection[k]= abs(self.Reflection[k])**2 + \
+                                        (abs(TB_pp)**2 + \
+                                         abs(TB_0m)**2 + \
+                                         abs(TB_0p)**2 + \
+                                         abs(TB_mm)**2 + \
+                                         abs(TB_mp)**2 ) *(1/hbar/self.vg)**2
                                           
                 ist = 100*k / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
@@ -696,9 +727,20 @@ class ensemble(object):
                 plt.savefig('TnR_rot.png',dpi=700)
                 plt.show()
                 plt.clf()
+
+            if self.typ == 'L' and VERIFICATION_LAMBDA==1:
+                plt.plot(self.deltaP,self.fullReflection, 'r-',label='R',lw=1.5)
+                plt.plot(self.deltaP, self.fullTransmittance, 'm-', label='T',lw=1.5)
+                plt.legend()
+                plt.xlabel('Detuning, $\gamma$',fontsize=16)
+                plt.ylabel('R,T',fontsize=16)
+                plt.savefig('TnR_full.png',dpi=700)
+                plt.show()
+                plt.clf()
+
             
             plt.xlabel('Detuning, $\gamma$')
-            plt.ylabel('R,T')
+            plt.ylabel('Loss')
             plt.title('Loss')
             plt.plot(self.deltaP, self.SideScattering, 'g-',lw=1.5)
             plt.show()
@@ -712,7 +754,7 @@ c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
 gd = 1.; #vacuum decay rate The only 
 lambd = 1; # atomic wavelength (lambdabar)
 k = 1/lambd
-a = 2*np.pi*200/850*lambd; # nanofiber radius in units of Rb wavelength
+a = 2*np.pi*200/780*lambd; # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica) 
 
 
@@ -728,14 +770,19 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-10, 10, 180)*gd
+freq = np.linspace(-2, 2, 180)*gd
 
 #Validation (all = 1 iff ful theory, except VERIFICATION_LAMBDA)
 
-RADIATION_MODES_MODEL = 0. # = 1 iff assuming our model of radiation modes =0 else
-VACUUM_DECAY = 1. # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
-PARAXIAL = 1. # = 0 iff paraxial, =1 iff full mode
-VERIFICATION_LAMBDA = 0.
+RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
+VACUUM_DECAY = 1 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
+VERIFICATION_LAMBDA = 0
+
+FULL = 0;
+FIRST = 0; # = 0 iff assuming full subtraction
+SECOND = 0;
+
 """
 ______________________________________________________________________________
 Executing program
@@ -747,18 +794,21 @@ ______________________________________________________________________________
 if __name__ == '__main__':
     args = {
         
-            'nat':6, #number of atoms
-            'nb':0, #number of neighbours in raman chanel (for L-atom only)
+            'nat':2, #number of atoms
+            'nb':1, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 2.0, # distance from fiber
             'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
-            'typ':'V',  # L or V for Lambda and V atom resp.
-            'ff': 0.3
+            'typ':'L',  # L or V for Lambda and V atom resp.
+            'ff': 0.9
             
             }
             
     chi = ensemble(**args)
     chi.generate_ensemble()
     chi.visualize()
+
+
+
