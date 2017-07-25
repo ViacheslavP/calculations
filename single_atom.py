@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 
 from matplotlib import rc
-rc('font',**{'family':'serif','sans-serif':['Helvetica'],'size':16})
-rc('text', usetex=True)
+#rc('font',**{'family':'serif','sans-serif':['Helvetica'],'size':16})
+#rc('text', usetex=True)
 
 import mkl
 mkl.set_num_threads(1)
@@ -39,7 +39,7 @@ x = np.linspace(1, 5, ndots) * a
 em = -m.E(x)
 ez = m.Ez(x)
 ep = m.dE(x)
-projE = m.projE(x)
+
 
 gammaFull = np.zeros([ndots], dtype=complex)
 for i in range(ndots):
@@ -66,11 +66,8 @@ gammaFundamental = f00
 
 gammaIntegral = np.zeros([ndots], dtype=complex)
 
-for i in range(ndots):
-    emfi = np.array([ep[i], ez[i], em[i]], dtype=complex)
-    emfic = np.conjugate(np.array([ep[i], ez[i], em[i]], dtype=complex))
 
-    gammaIntegral[i] = 1 + 8*d00*d00*np.pi*kv*np.real((np.dot(emfi, emfic) * (1 / m.vg ) - projE[i]*abs(em[i])**2))
+
 
 
 
@@ -86,56 +83,56 @@ ylim2 = [0.0, 0.38]
 ylimratio = (ylim[1] - ylim[0]) / (ylim2[1] - ylim2[0] + ylim[1] - ylim[0])
 ylim2ratio = (ylim2[1] - ylim2[0]) / (ylim2[1] - ylim2[0] + ylim[1] - ylim[0])
 gs = gridspec.GridSpec(2, 1, height_ratios=[ylimratio, ylim2ratio])
-fig = plt.figure()
-ax = fig.add_subplot(gs[0])
-ax2 = fig.add_subplot(gs[1])
+#fig = plt.figure()
+#ax = fig.add_subplot(gs[0])
+#ax2 = fig.add_subplot(gs[1])
 
 
-ax.plot(x/a, gammaFull,'b--', lw=1.5, label = 'Full subtraction')
-ax.plot(x/a, gammaPara,'r', lw=1.5, label = 'Paraxial subtraction')
-ax.plot(x/a, gammaExact,'m-.', lw=1.5, label = 'Exact')
-ax.plot(x/a, gammaIntegral, 'k', lw=1.5, label = 'Integral')
-ax.legend()
+#ax.plot(x/a, gammaFull,'b--', lw=1.5, label = 'Full subtraction')
+#ax.plot(x/a, gammaPara,'r', lw=1.5, label = 'Paraxial subtraction')
+#ax.plot(x/a, gammaExact,'m-.', lw=1.5, label = 'Exact')
+#ax.plot(x/a, gammaIntegral, 'k', lw=1.5, label = 'Integral')
+#ax.legend()
 
-ax2.plot(x/a, gammaFundamental,'g',lw=1.5,label = 'Fundamental mode only')
-ax2.legend()
+#ax2.plot(x/a, gammaFundamental,'g',lw=1.5,label = 'Fundamental mode only')
+#ax2.legend()
 
-ax.set_xlim([1,3])
-ax2.set_xlim([1,3])
+#ax.set_xlim([1,3])
+#ax2.set_xlim([1,3])
 
-ax.set_ylim(ylim)
-ax2.set_ylim(ylim2)
-plt.subplots_adjust(hspace=0.03)
-ax.spines['bottom'].set_visible(False)
-ax2.spines['top'].set_visible(False)
-ax.xaxis.tick_top()
-ax.tick_params(labeltop='off')
-ax2.xaxis.tick_bottom()
-ax2.set_xlabel('$r, a$')
-ax2.set_ylabel('$ {\gamma} / {\gamma_0} $')
-ax2.yaxis.set_label_coords(0.05, 0.5, transform=fig.transFigure)
+#ax.set_ylim(ylim)
+#ax2.set_ylim(ylim2)
+#plt.subplots_adjust(hspace=0.03)
+#ax.spines['bottom'].set_visible(False)
+#ax2.spines['top'].set_visible(False)
+#ax.xaxis.tick_top()
+#ax.tick_params(labeltop='off')
+#ax2.xaxis.tick_bottom()
+#ax2.set_xlabel('$r, a$')
+#ax2.set_ylabel('$ {\gamma} / {\gamma_0} $')
+#ax2.yaxis.set_label_coords(0.05, 0.5, transform=fig.transFigure)
 
-kwargs = dict(color='k', clip_on=False)
-xlim = ax.get_xlim()
-dx = .02 * (xlim[1] - xlim[0])
-dy = .01 * (ylim[1] - ylim[0]) / ylimratio
-ax.plot((xlim[0] - dx, xlim[0] + dx), (ylim[0] - dy, ylim[0] + dy), **kwargs)
-ax.plot((xlim[1] - dx, xlim[1] + dx), (ylim[0] - dy, ylim[0] + dy), **kwargs)
-dy = .01 * (ylim2[1] - ylim2[0]) / ylim2ratio
-ax2.plot((xlim[0] - dx, xlim[0] + dx), (ylim2[1] - dy, ylim2[1] + dy), **kwargs)
-ax2.plot((xlim[1] - dx, xlim[1] + dx), (ylim2[1] - dy, ylim2[1] + dy), **kwargs)
-ax.set_xlim(xlim)
-ax2.set_xlim(xlim)
+#kwargs = dict(color='k', clip_on=False)
+#xlim = ax.get_xlim()
+#dx = .02 * (xlim[1] - xlim[0])
+#dy = .01 * (ylim[1] - ylim[0]) / ylimratio
+#ax.plot((xlim[0] - dx, xlim[0] + dx), (ylim[0] - dy, ylim[0] + dy), **kwargs)
+#ax.plot((xlim[1] - dx, xlim[1] + dx), (ylim[0] - dy, ylim[0] + dy), **kwargs)
+#dy = .01 * (ylim2[1] - ylim2[0]) / ylim2ratio
+#ax2.plot((xlim[0] - dx, xlim[0] + dx), (ylim2[1] - dy, ylim2[1] + dy), **kwargs)
+#ax2.plot((xlim[1] - dx, xlim[1] + dx), (ylim2[1] - dy, ylim2[1] + dy), **kwargs)
+#ax.set_xlim(xlim)
+#ax2.set_xlim(xlim)
 
-plt.show()
+#plt.show()
 
 
-plt.title('Spontaneous decay of ${}^{87}Rb$ atom near nanofiber')
-plt.ylabel('$\gamma / \gamma_0$')
-plt.xlabel('$r, a$')
+#plt.title('Spontaneous decay of ${}^{87}Rb$ atom near nanofiber')
+#plt.ylabel('$\gamma / \gamma_0$')
+#plt.xlabel('$r, a$')
 
 plt.plot(x/a, gammaExact, 'r')
-plt.plot(x/a, gammaIntegral, 'k')
+plt.plot(x/a, gammaFull, 'k')
 plt.show()
 
 
@@ -150,16 +147,31 @@ ___________________________________________________
 ------------------Scattering-----------------------
 ___________________________________________________
 """
-freq = np.linspace(-1.,1.,150)
+freq = np.linspace(-0.25,0.25,350)
 
-args = {
+args10 = {
+
+            'nat':1, #number of atoms
+            'nb':0, #number of neighbours in raman chanel (for L-atom only)
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
+            'd' : 2.0, # distance from fiber
+            'l0':1.00, # mean distance between atoms (in lambda_m /2 units)
+            'deltaP':freq,  # array of freq.
+            'typ':'L',  # L or V for Lambda and V atom resp.
+            'ff': 0.3
+
+        }
+
+
+args05 = {
 
             'nat':1, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 1.5, # distance from fiber
-            'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
+            'l0':1.00, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3
@@ -173,11 +185,11 @@ _______________Fundamental modes only_____________
 ods.RADIATION_MODES_MODEL = 0 # = 1 iff assuming our model of radiation modes =0 else
 ods.VACUUM_DECAY = 0 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 ods.PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
-ods.VERIFICATION_LAMBDA = 1
+ods.SINGLE_RAMAN = True
 
 
 
-sa = ods.ensemble(**args)
+sa = ods.ensemble(**args05)
 sa.generate_ensemble()
 
 T_fmo = sa.fullTransmittance
@@ -185,6 +197,41 @@ R_fmo = sa.fullReflection
 
 
 
+np.savetxt('txts/freq.txt', freq, newline='`,',fmt='%1.5f')
+np.savetxt('txts/'+'2.0'+'R_fmo.txt', R_fmo, newline='`,',fmt='%1.8f')
+np.savetxt('txts/'+'2.0'+'T_fmo.txt', T_fmo, newline='`,',fmt='%1.8f')
+
+
+plt.plot(freq, T_fmo, 'b', lw=1.25)
+plt.plot(freq, R_fmo, 'r', lw=1.25)
+plt.show()
+
+ods.RADIATION_MODES_MODEL = 0 # = 1 iff assuming our model of radiation modes =0 else
+ods.VACUUM_DECAY = 0 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+ods.PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
+ods.SINGLE_RAMAN = True
+
+
+
+sa = ods.ensemble(**args10)
+sa.generate_ensemble()
+
+T_fmo = sa.fullTransmittance
+R_fmo = sa.fullReflection
+
+np.savetxt('txts/freq.txt', freq, newline='`,',fmt='%1.5f')
+np.savetxt('txts/'+'1.5'+'R_fmo.txt', R_fmo, newline='`,',fmt='%1.8f')
+np.savetxt('txts/'+'1.5'+'T_fmo.txt', T_fmo, newline='`,',fmt='%1.8f')
+
+
+
+
+
+plt.plot(freq, T_fmo, 'b', lw=1.25)
+plt.plot(freq, R_fmo, 'r', lw=1.25)
+plt.show()
+
+print('Done')
 """
 _______________Full subtraction____________________
 """
@@ -195,54 +242,68 @@ ods.PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
 ods.VERIFICATION_LAMBDA = 1
 ods.FIRST = 0
 
-sa = ods.ensemble(**args)
+sa = ods.ensemble(**args05)
 sa.generate_ensemble()
 
-T_fs = sa.fullTransmittance
-R_fs = sa.fullReflection
+T_05 = sa.fullTransmittance
+R_05 = sa.fullReflection
+
+sa = ods.ensemble(**args10)
+sa.generate_ensemble()
+
+T_10 = sa.fullTransmittance
+R_10 = sa.fullReflection
+
+
+plt.plot(freq, T_05, 'b', lw=1.25)
+plt.plot(freq, T_10, 'r', lw=1.25)
+plt.show()
+
+plt.plot(freq, R_05, 'b', lw=1.25)
+plt.plot(freq, R_10, 'r', lw=1.25)
+plt.show()
+
 
 
 """
 _____________Paraxial subtraction__________________
 """
 
-ods.RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
-ods.VACUUM_DECAY = 1 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
-ods.PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
-ods.VERIFICATION_LAMBDA = 1
-ods.FIRST = 1
-ods.SECOND = 1
+#ods.RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
+#ods.VACUUM_DECAY = 1 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+#ods.PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
+#ods.VERIFICATION_LAMBDA = 1
+#ods.FIRST = 1
+#ods.SECOND = 1
 
-sa = ods.ensemble(**args)
-sa.generate_ensemble()
+#sa = ods.ensemble(**args)
+#sa.generate_ensemble()
 
-T_ps = sa.fullTransmittance
-R_ps = sa.fullReflection
+#T_ps = sa.fullTransmittance
+#R_ps = sa.fullReflection
 
-plt.plot(freq, R_fmo,  lw=0.75,label='Reflection,\n decay in waveguide only')
-plt.plot(freq, T_fmo, lw=0.75, label='Transmittance,\n decay in waveguide only')
+#plt.plot(freq, R_fmo,  lw=0.75,label='Reflection,\n decay in waveguide only')
+#plt.plot(freq, T_fmo, lw=0.75, label='Transmittance,\n decay in waveguide only')
 
-plt.plot(freq, R_ps,'m--', label='Reflection,\n paraxial subtraction model')
-plt.plot(freq, T_ps,'--',color = '#ff5500ff', label='Transmittance,\n paraxial subtraction model')
-plt.plot(freq, 1 - R_ps - T_ps,'-.',color = '#aa55ffff', label='Loss,\n paraxial subtraction model')
-plt.legend()
+#plt.plot(freq, R_ps,'m--', label='Reflection,\n paraxial subtraction model')
+#plt.plot(freq, T_ps,'--',color = '#ff5500ff', label='Transmittance,\n paraxial subtraction model')
+#plt.plot(freq, 1 - R_ps - T_ps,'-.',color = '#aa55ffff', label='Loss,\n paraxial subtraction model')
+#plt.legend()
 
-plt.xlabel('Detuning, $\gamma$')
-plt.show()
+#plt.xlabel('Detuning, $\gamma$')
+#plt.show()
 
-plt.plot(freq, R_fmo,  lw=0.75,label='Reflection,\n decay in waveguide only')
-plt.plot(freq, R_ps,'m--', label='Reflection,\n paraxial subtraction model')
-plt.plot(freq, 1 - R_ps - T_ps,'-.',color = '#aa55ffff', label='Loss,\n paraxial subtraction model')
-plt.xlim([-0.25,0.25])
-plt.ylim([0,0.05])
-plt.show()
+#plt.plot(freq, R_fmo,  lw=0.75,label='Reflection,\n decay in waveguide only')
+#plt.plot(freq, R_ps,'m--', label='Reflection,\n paraxial subtraction model')
+#plt.plot(freq, 1 - R_ps - T_ps,'-.',color = '#aa55ffff', label='Loss,\n paraxial subtraction model')
+#plt.xlim([-0.25,0.25])
+#plt.ylim([0,0.05])
+#plt.show()
 
-np.savetxt('txts/freq.txt', freq, newline='`,',fmt='%1.5f')
-np.savetxt('txts/'+'1.5'+'R_fmo.txt', R_fmo, newline='`,',fmt='%1.5f')
-np.savetxt('txts/'+'1.5'+'T_fmo.txt', T_fmo, newline='`,',fmt='%1.5f')
-np.savetxt('txts/'+'1.5'+'R_exact.txt', R_fs, newline='`,',fmt='%1.5f')
-np.savetxt('txts/'+'1.5'+'T_exact.txt', T_fs, newline='`,',fmt='%1.5f')
-np.savetxt('txts/'+'1.5'+'Loss.txt', 1-R_fs-T_fs, newline='`,',fmt='%1.5f')
+
+#np.savetxt('txts/'+'2.0'+'R_exact.txt', R_fs, newline='`,',fmt='%1.5f')
+#np.savetxt('txts/'+'2.0'+'T_exact.txt', T_fs, newline='`,',fmt='%1.5f')
+#np.savetxt('txts/'+'2.0'+'Loss.txt', 1-R_fs-T_fs, newline='`,',fmt='%1.5f')
 
 
 

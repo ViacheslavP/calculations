@@ -106,6 +106,8 @@ class ensemble(object):
             s = self._s
             dist = self._dist
             nb = self.nb
+            if FIX_RANDOM == 1:
+                np.random.seed(seed=5)
             
 
             if s=='chain':
@@ -115,7 +117,7 @@ class ensemble(object):
             elif s=='nocorrchain':
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
-                L = nat*self.step
+                L = (nat-1)*self.step
                 z = np.random.rand(nat)*L
 
             elif s=='doublechain':
@@ -181,7 +183,6 @@ class ensemble(object):
             
             self.rr = np.asarray(np.sqrt([[((x[i]-x[j])**2+(y[i]-y[j])**2+(z[i] \
             -z[j])**2)for i in range(nat)] for j in range(nat)]),dtype=float)
-
 
 
             self.xm = np.asarray([[((x[i]-x[j])-1j*(y[i]-y[j]))/(self.rr[i,j] + \
@@ -323,10 +324,11 @@ class ensemble(object):
                                                        e+            e0           e-
                       
                     """
-                    
+
                     emfi  =  np.conjugate(  np.array([self.ep[i], self.ez[i], self.em[i]], dtype=np.complex))
                     emfjc =                 np.array([self.ep[j], self.ez[j], self.em[j]], dtype=np.complex)
-                    
+
+
                     epfi  =                 np.array([self.em[i], self.ez[i], self.ep[i]], dtype=np.complex)
                     epfjc =  np.conjugate(  np.array([self.em[j], self.ez[j], self.ep[j]], dtype=np.complex) )
                     
@@ -337,6 +339,8 @@ class ensemble(object):
                     
                     epbi  =                 np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=np.complex)
                     epbjc =  np.conjugate(  np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=np.complex) )
+
+
 
 
                     emfjcSub = np.array([0, 0, self.em[j]], dtype=np.complex)
@@ -351,6 +355,7 @@ class ensemble(object):
                     forward = np.outer(emfi, emfjc) + np.outer(epfi, epfjc)
                     backward = np.outer(embi, embjc) + np.outer(epbi, epbjc)
 
+
                     zi = float(self.x0[i,0]*self.rr[i,0])
                     zj = float(self.x0[j,0]*self.rr[j,0])
 
@@ -358,12 +363,13 @@ class ensemble(object):
                     if abs(zi - zj) < 1e-6:
                         Di[i,j,:,:] = 0.5 * d00*d00*((forward + backward) * Dz[i,i] - (forwardSub+backwardSub)*DzSub[i,j])
                         
-                    elif zi>zj:
+                    elif zi<zj:
                         Di[i,j,:,:] = (forward * Dz[i,j] - forwardSub*DzSub[i,j]) * d00*d00
                         
-                    elif zi<zj:
+                    elif zi>zj:
                         Di[i,j,:,:] = (backward * Dz[i,j] - backwardSub*DzSub[i,j]) * d00*d00
-                    
+
+
                     """
                     _________________________________________________________
                     Vacuum interaction (No self-energy)
@@ -550,9 +556,19 @@ class ensemble(object):
                 
 
             print('\n')
-            
-            
+
+
         def S_matrix_for_Lambda(self):
+
+            """
+            Method calculates S matrix for Lambda atom. There is two global options, which is set by changing global
+            parameter SINGLE_RAMAN to 1 or 0. For 0 it calculates S matrix elements only for Rayleigh and Faraday
+            channels (without change of atomic polarization). For 1 it calculates these ... for changing polarization of
+            single atom in a whole atomic chain.
+
+            :return:
+            fullTransmittance and fullReflection
+            """
             import sys
             nat=self.nat
             nb = self.nb
@@ -573,64 +589,150 @@ class ensemble(object):
             """
             #Input
             ddRight = np.zeros(nat*3**nb, dtype=np.complex);  
-                
+
+
+            """
+            ________________________________________________________________
+            Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
+            ________________________________________________________________
+            """
             #Output
-            #+1, +
-            ddLeftF_pp = np.zeros(nat*3**nb, dtype=np.complex);
-            ddLeftB_pp = np.zeros(nat*3**nb, dtype=np.complex);
                 
             #+1, -
             ddLeftF_pm = np.zeros(nat*3**nb, dtype=np.complex);
             ddLeftB_pm = np.zeros(nat*3**nb, dtype=np.complex);
+
+            # +1, + (smwht like Faraday effect of magnitized atomic chain(!), no atomic transitions, will call it Faraday channel)
+            ddLeftF_pp = np.zeros(nat * 3 ** nb, dtype=np.complex);
+            ddLeftB_pp = np.zeros(nat * 3 ** nb, dtype=np.complex);
+
+            if SINGLE_RAMAN:
+
+                """
+                ________________________________________________________________
+                Raman channels
+                ________________________________________________________________
+                """
+
+
+
+                #0, +
+                ddLeftF_0p = np.zeros([nat*3**nb, nat], dtype=np.complex);
+                ddLeftB_0p = np.zeros([nat*3**nb, nat], dtype=np.complex);
                 
-            #0, +
-            ddLeftF_0p = np.zeros(nat*3**nb, dtype=np.complex);
-            ddLeftB_0p = np.zeros(nat*3**nb, dtype=np.complex);
+                #0, -
+                ddLeftF_0m = np.zeros([nat*3**nb, nat], dtype=np.complex);
+                ddLeftB_0m = np.zeros([nat*3**nb, nat], dtype=np.complex);
                 
-            #0, -
-            ddLeftF_0m = np.zeros(nat*3**nb, dtype=np.complex);
-            ddLeftB_0m = np.zeros(nat*3**nb, dtype=np.complex);
+                #-1, +
+                ddLeftF_mp = np.zeros([nat*3**nb, nat], dtype=np.complex);
+                ddLeftB_mp = np.zeros([nat*3**nb, nat], dtype=np.complex);
                 
-            #-1, +
-            ddLeftF_mp = np.zeros(nat*3**nb, dtype=np.complex);
-            ddLeftB_mp = np.zeros(nat*3**nb, dtype=np.complex);
-                
-            #-1, -
-            ddLeftF_mm = np.zeros(nat*3**nb, dtype=np.complex);
-            ddLeftB_mm = np.zeros(nat*3**nb, dtype=np.complex);
-  
+                #-1, -
+                ddLeftF_mm = np.zeros([nat*3**nb, nat], dtype=np.complex);
+                ddLeftB_mm = np.zeros([nat*3**nb, nat], dtype=np.complex);
+
+                # Reduction of T-Raman-Matrix
+                sum_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)))
+
             One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
             Sigmad = 0*(np.identity(nat*3**nb,dtype=np.complex))
                 
             for i in range(nat):
+
+
                     
-                ddRight[(i+1)*3**nb-1] =     1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
-                    
+                ddRight[(i+1)*3**nb-1] = 1j*d10*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
+
+                """
+                ________________________________________________________________
+                Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
+                ________________________________________________________________
+                """
+                # Rayleigh
                 ddLeftF_pm[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
                 ddLeftB_pm[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
+                # Faraday
+                ddLeftF_pp[(i+1)*3**nb-1] = -1j * d01*np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * self.ep[i]
+                ddLeftB_pp[(i+1)*3**nb-1] =  1j * d01*np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * self.ep[i]
+
+
+                if SINGLE_RAMAN:
+                    """
+                    ________________________________________________________________
+                    Raman channels
+                    ________________________________________________________________
+                    """
+                    for jp in range(nat):
+                        if jp>i:
+                            j=jp-1
+                        elif jp<i:
+                            j=jp
+                        elif jp==i:
+                            index_0 = (i+1)*3**nb - 1
+                            index_m = (i+1)*3**nb - 1
+                            j = i
+
+                            ddLeftF_0m[index_0, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ez[i])
+                            ddLeftB_0m[index_0, j] = -1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ez[i])
+
+                            ddLeftF_0p[index_0, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.ez[i]
+                            ddLeftB_0p[index_0, j] = -1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.ez[i]
+
+                            ddLeftF_mm[index_m, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ep[i])
+                            ddLeftB_mm[index_m, j] = 1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ep[i])
+
+                            ddLeftF_mp[index_m, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.em[i]
+                            ddLeftB_mp[index_m, j] = 1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.em[i]
+
+                            continue
+
+
+                        index_0 = (i)*3**nb - 1 + 3**nb - (2-1)*(3**(j))
+                        index_m = (i)*3**nb - 1 + 3**nb - (2-0)*(3**(j))
+
+                        ddLeftF_0m[index_0,j] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
+                        ddLeftB_0m[index_0,j] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
                     
-                ddLeftF_pp[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
-                ddLeftB_pp[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+                        ddLeftF_0p[index_0,j] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+                        ddLeftB_0p[index_0,j] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
                     
-                ddLeftF_0m[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ez[i])
-                ddLeftB_0m[(i+1)*3**nb-1] = -1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ez[i])
+                        ddLeftF_mm[index_m,j] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
+                        ddLeftB_mm[index_m,j] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.em[i])
                     
-                ddLeftF_0p[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ez[i]
-                ddLeftB_0p[(i+1)*3**nb-1] = -1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ez[i]
-                    
-                ddLeftF_mm[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ep[i])
-                ddLeftB_mm[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*np.conjugate(self.ep[i])
-                    
-                ddLeftF_mp[(i+1)*3**nb-1] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
-                ddLeftB_mp[(i+1)*3**nb-1] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.em[i]
+                        ddLeftF_mp[index_m,j] = -1j*d01*np.exp(+1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+                        ddLeftB_mp[index_m,j] =  1j*d01*np.exp(-1j*self.kv*self.x0[0,i]*self.rr[0,i])*self.ep[i]
+
+                        if j==i:
+                            index_0 = (i+1)*3**nb - 1
+                            index_m = (i+1)*3**nb - 1
+
+                            ddLeftF_0m[index_0, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ez[i])
+                            ddLeftB_0m[index_0, j] = -1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ez[i])
+
+                            ddLeftF_0p[index_0, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.ez[i]
+                            ddLeftB_0p[index_0, j] = -1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.ez[i]
+
+                            ddLeftF_mm[index_m, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ep[i])
+                            ddLeftB_mm[index_m, j] = 1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ep[i])
+
+                            ddLeftF_mp[index_m, j] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.em[i]
+                            ddLeftB_mp[index_m, j] = 1j * d01 * np.exp(-1j * self.kv * self.x0[0, i] * self.rr[0, i]) * \
+                                                     self.em[i]
                     
                     
                 for j in range(3**nb):
                     Sigmad[(i)*3**nb+j,(i)*3**nb+j] = gd[i]*0.5j #distance dependance of dacay rate
 
-            if VERIFICATION_LAMBDA == 1:
-                self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
-                self.fullReflection = np.zeros(len(self.deltaP),dtype=float)
+            self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
+            self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
 
             for k in range(len(self.deltaP)):
                 
@@ -647,56 +749,67 @@ class ensemble(object):
                 
                 TF_pm = np.dot(Resolventa,ddLeftF_pm)*2*np.pi*hbar*kv
                 TB_pm = np.dot(Resolventa,ddLeftB_pm)*2*np.pi*hbar*kv
-                
-                TF_pp = np.dot(Resolventa,ddLeftF_pp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                TB_pp = np.dot(Resolventa,ddLeftB_pp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                
-                TF_0m = np.dot(Resolventa,ddLeftF_0m)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                TB_0m = np.dot(Resolventa,ddLeftB_0m)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
 
-                TF_0p = np.dot(Resolventa,ddLeftF_0p)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                TB_0p = np.dot(Resolventa,ddLeftB_0p)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                
-                TF_mm = np.dot(Resolventa,ddLeftF_mm)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                TB_mm = np.dot(Resolventa,ddLeftB_mm)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                
-                TF_mp = np.dot(Resolventa,ddLeftF_mp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                TB_mp = np.dot(Resolventa,ddLeftB_mp)*2*np.pi*hbar*kv*VERIFICATION_LAMBDA
-                
-                
+                TF_pp = np.dot(Resolventa, ddLeftF_pp) * 2 * np.pi * hbar * kv
+                TB_pp = np.dot(Resolventa, ddLeftB_pp) * 2 * np.pi * hbar * kv
 
                     
                 self.Transmittance[k] = 1.+(-1j/hbar*(TF_pm)/(self.vg))
                 self.Reflection[k] = (-1j/hbar*(TB_pm/(self.vg)))
+
+                self.iTransmittance[k] = (-1j/hbar*(TF_pp)/(self.vg))
+                self.iReflection[k] = (-1j/hbar*(TB_pp)/(self.vg))
+
                      
                 self.SideScattering[k] = 1 - abs(self.Transmittance[k])**2 - abs(self.Reflection[k])**2 - \
-                                        (abs(TF_pp)**2 + abs(TB_pp)**2 + \
-                                         abs(TF_0m)**2 + abs(TB_0m)**2 + \
-                                         abs(TF_0p)**2 + abs(TB_0p)**2 + \
-                                         abs(TF_mm)**2 + abs(TB_mm)**2 + \
-                                         abs(TF_mp)**2 + abs(TB_mp)**2 ) *(1/hbar/self.vg)**2
+                                         abs(self.iTransmittance[k])**2 - abs(self.iReflection[k])**2
 
-                if VERIFICATION_LAMBDA == 1:
-                    self.fullTransmittance[k] = abs(self.Transmittance[k])**2 +\
-                                        (abs(TF_pp)**2 + \
-                                         abs(TF_0m)**2 + \
-                                         abs(TF_0p)**2 + \
-                                         abs(TF_mm)**2 +  \
-                                         abs(TF_mp)**2 ) *(1/hbar/self.vg)**2
-                    self.fullReflection[k]= abs(self.Reflection[k])**2 + \
-                                        (abs(TB_pp)**2 + \
-                                         abs(TB_0m)**2 + \
-                                         abs(TB_0p)**2 + \
-                                         abs(TB_mm)**2 + \
-                                         abs(TB_mp)**2 ) *(1/hbar/self.vg)**2
+                self.fullTransmittance[k] =  abs(self.Transmittance[k]) ** 2 + \
+                                            abs(self.iTransmittance[k]) ** 2
+
+                self.fullReflection[k] = abs(self.Reflection[k]) ** 2 + \
+                                         abs(self.iReflection[k]) ** 2
+
+
+
+                if SINGLE_RAMAN: #SINGLE_RAMAN == 1:
+
+
+
+
+                    TF2_0m = sum_reduce(np.dot(Resolventa, ddLeftF_0m) * 2 * np.pi * hbar * kv)
+                    TB2_0m = sum_reduce(np.dot(Resolventa, ddLeftB_0m) * 2 * np.pi * hbar * kv)
+
+                    TF2_0p = sum_reduce(np.dot(Resolventa, ddLeftF_0p) * 2 * np.pi * hbar * kv)
+                    TB2_0p = sum_reduce(np.dot(Resolventa, ddLeftB_0p) * 2 * np.pi * hbar * kv)
+
+                    TF2_mm = sum_reduce(np.dot(Resolventa, ddLeftF_mm) * 2 * np.pi * hbar * kv)
+                    TB2_mm = sum_reduce(np.dot(Resolventa, ddLeftB_mm) * 2 * np.pi * hbar * kv)
+
+                    TF2_mp = sum_reduce(np.dot(Resolventa, ddLeftF_mp) * 2 * np.pi * hbar * kv)
+                    TB2_mp = sum_reduce(np.dot(Resolventa, ddLeftB_mp) * 2 * np.pi * hbar * kv)
+
+
+
+                    self.fullTransmittance[k] +=((TF2_0m) + \
+                                                (TF2_0p) + \
+                                                (TF2_mm) +  \
+                                                (TF2_mp) ) *(1/hbar/self.vg)**2
+
+                    self.fullReflection[k] +=((TB2_0m) + \
+                                             (TB2_0p) + \
+                                             (TB2_mm) + \
+                                             (TB2_mp) ) *(1/hbar/self.vg)**2
+
+                    self.SideScattering[k] = 1 - (self.fullTransmittance[k])  - (self.fullReflection[k])
                                           
                 ist = 100*k / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
                 sys.stdout.flush()
                 
             print('\n')
-              
-            
+
+
         def reflection_calc(self):
             if self.typ == 'V':
                 self.S_matrix_for_V()
@@ -718,6 +831,15 @@ class ensemble(object):
             plt.show()
             plt.clf()
 
+            plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
+            plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
+            plt.legend()
+            plt.xlabel('Detuning, $\gamma$',fontsize=16)
+            plt.ylabel('R,T',fontsize=16)
+            plt.savefig('TnR.png',dpi=700)
+            plt.show()
+            plt.clf()
+
             if self.typ == 'V':
                 plt.plot(self.deltaP,(abs(self.iReflection)**2 ), 'r-',label='R',lw=1.5)
                 plt.plot(self.deltaP, abs(self.iTransmittance)**2, 'm-', label='T',lw=1.5)
@@ -728,7 +850,7 @@ class ensemble(object):
                 plt.show()
                 plt.clf()
 
-            if self.typ == 'L' and VERIFICATION_LAMBDA==1:
+            if self.typ == 'L' and SINGLE_RAMAN==True:
                 plt.plot(self.deltaP,self.fullReflection, 'r-',label='R',lw=1.5)
                 plt.plot(self.deltaP, self.fullTransmittance, 'm-', label='T',lw=1.5)
                 plt.legend()
@@ -748,6 +870,20 @@ class ensemble(object):
             
  #scale constants
 
+        def simple_visor(self):
+            import matplotlib.pyplot as plt
+
+            plt.plot(self.deltaP, (abs(self.Reflection) ** 2), 'r-', label='R', lw=1.5)
+            #plt.plot(self.deltaP, abs(self.Transmittance) ** 2, 'm-', label='T', lw=1.5)
+
+            plt.plot(self.deltaP, abs(self.fullReflection) , 'r--', label='R', lw=1.5)
+            #plt.plot(self.deltaP, abs(self.fullTransmittance) , 'm--', label='T', lw=1.5)
+            plt.legend()
+            plt.xlabel('Detuning, $\gamma$', fontsize=16)
+            plt.ylabel('R,T', fontsize=16)
+            plt.savefig('TnR.png', dpi=700)
+            plt.show()
+            plt.clf()
 
 hbar = 1 #dirac's constant = 1 => enrergy = omega
 c = 1 #speed of light c = 1 => time in cm => cm in wavelenght
@@ -770,14 +906,16 @@ d1m0 = d01m;
 
 #atomic ensemble properties
 
-freq = np.linspace(-2, 2, 180)*gd
+freq = np.linspace(-5, 5, 280)*gd
 
-#Validation (all = 1 iff ful theory, except VERIFICATION_LAMBDA)
+#Validation (all = 1 iff ful theory, except SINGLE_RAMAN)
 
 RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
-VACUUM_DECAY = 1 # = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
-PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
-VERIFICATION_LAMBDA = 0
+VACUUM_DECAY = 1# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+PARAXIAL = 0 # = 0 iff paraxial, =1 iff full mode
+SINGLE_RAMAN = True
+FIX_RANDOM = 1
+
 
 FULL = 0;
 FIRST = 0; # = 0 iff assuming full subtraction
@@ -792,23 +930,32 @@ ______________________________________________________________________________
 
 
 if __name__ == '__main__':
+
+    #from matplotlib import rc
+
+    #rc('font', **{'family': 'serif', 'sans-serif': ['Helvetica'], 'size': 16})
+    #rc('text', usetex=True)
+
     args = {
         
-            'nat':2, #number of atoms
-            'nb':1, #number of neighbours in raman chanel (for L-atom only)
+            'nat':6, #number of atoms
+            'nb':5, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
-            'd' : 2.0, # distance from fiber
-            'l0':1.001, # mean distance between atoms (in lambda_m /2 units)
+            'd' : 1.5, # distance from fiber
+            'l0': 1.5, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'L',  # L or V for Lambda and V atom resp.
-            'ff': 0.9
+            'ff': 0.3
             
             }
-            
-    chi = ensemble(**args)
-    chi.generate_ensemble()
-    chi.visualize()
+
+    
+
+    SE0 = ensemble(**args)
+    print(SE0.kv)
+    SE0.generate_ensemble()
+    SE0.simple_visor()
 
 
 
