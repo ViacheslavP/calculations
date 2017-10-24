@@ -30,7 +30,6 @@ def convolution(freq, kernel, pulse, vg=0.7):
     fim = fim[_sw]
     return time, fim
 
-
 def gauss_pulse(om, T0):
     """
     Inc. pulse as function of $\omega$ (conj. to time, frequency) (Fourier image)
@@ -38,39 +37,38 @@ def gauss_pulse(om, T0):
     """
     return  np.exp((1j * om * T0 * (1j * om * T0 + 2 * np.pi**2)) / (4*np.pi**2)) * ((2 / np.pi) * T0**2)**(1/4)
 
-
 def extract_delay(t, f):
     """
     Extracting pulse delay
     """
     return sum(t*abs(f)**2)/sum(abs(f)**2) - pdTime/2
 
+if __name__ == '__main__':
 
+    """
+    Pulse parameters:
+    """
+    #Rabi frequency
+    ods.RABI = 4.
+    ods.SINGLE_RAMAN = False
 
-"""
-Pulse parameters:
-"""
-#Rabi frequency
-ods.RABI = 4.
-ods.SINGLE_RAMAN = False
+    #Pulse duration
+    pdTime = 2 * np.pi
 
-#Pulse duration
-pdTime = 2 * np.pi
+    #Frequency interval, vast enough
+    freq = ods.freq
 
-#Frequency interval, vast enough
-freq = ods.freq
+    #Number of atoms array to iterate
+    lenNumbers = 30
+    maxAtoms = 200
+    numberAtoms = np.linspace(10, maxAtoms, lenNumbers, dtype=int)
 
-#Number of atoms array to iterate
-lenNumbers = 30
-maxAtoms = 200
-numberAtoms = np.linspace(10, maxAtoms, lenNumbers, dtype=int)
+    #Distance between atoms (regular)
+    lenDist = 120
+    distbAtoms = np.linspace(0.3, 2, lenDist)
 
-#Distance between atoms (regular)
-lenDist = 120
-distbAtoms = np.linspace(0.3, 2, lenDist)
-
-#Arguments of one_D_scattering module
-args = {
+    #Arguments of one_D_scattering module
+    args = {
 
     'nat': 20,  # number of atoms
     'nb': 2,  # number of neighbours in raman chanel (for L-atom only)
@@ -81,17 +79,17 @@ args = {
     'deltaP': freq,  # array of freq.
     'typ': 'L',  # L or V for Lambda and V atom resp.
     'ff': 0.3
-}
+    }
 
-delayArray = np.empty([lenNumbers, lenDist],dtype=float)
-for iAtom in range(lenNumbers):
-    args['nat'] = numberAtoms[iAtom]
-    for jDist in range(lenDist):
-        args['d'] = distbAtoms[jDist]
-        print('NoF =', numberAtoms[iAtom], 'Distance, in L/2 = ', 2*distbAtoms[jDist])
-        elasticSc = ods.ensemble(**args)
-        elasticSc.generate_ensemble()
-        _t, _f = convolution(freq, elasticSc.Transmittance, gauss_pulse(freq, pdTime), vg=elasticSc.vg)
-        delayArray[iAtom, jDist] = extract_delay(_t, _f)
+    delayArray = np.empty([lenNumbers, lenDist],dtype=float)
+    for iAtom in range(lenNumbers):
+        args['nat'] = numberAtoms[iAtom]
+        for jDist in range(lenDist):
+            args['d'] = distbAtoms[jDist]
+            print('NoA =', numberAtoms[iAtom], 'Distance, in L/2 = ', 2*distbAtoms[jDist])
+            elasticSc = ods.ensemble(**args)
+            elasticSc.generate_ensemble()
+            _t, _f = convolution(freq, elasticSc.Transmittance, gauss_pulse(freq, pdTime), vg=elasticSc.vg)
+            delayArray[iAtom, jDist] = extract_delay(_t, _f)
 
-np.savez('delayFile.npz', delay=delayArray, numbers = numberAtoms, distances = distbAtoms)
+    np.savez('delayFile.npz', delay=delayArray, numbers = numberAtoms, distances = distbAtoms)
