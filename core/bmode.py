@@ -124,8 +124,7 @@ class exact_mode(object):
 
         a = self._a
         omega = np.sqrt(self.sqr_omega(k))
-        print(k)
-        print(self.sqr_omega(k))
+
         n = self._n
         ha = a * np.sqrt(n*n*omega*omega - k*k)
         qa = a * np.sqrt(k**2- omega**2)
@@ -154,7 +153,7 @@ class exact_mode(object):
         self.E = lambda r: 1j * E(r) / _norm
         self.dE = lambda r: 1j * dE(r) / _norm
         self.Ez = lambda r: Ez(r) / _norm
-
+        print(_norm )
         self.Ephi = lambda r: 1j / np.sqrt(2) * (self.E(r) + self.dE(r))
         self.Er = lambda r: 1 / np.sqrt(2) * (self.E(r) - self.dE(r))
 
@@ -260,12 +259,13 @@ class exact_mode(object):
 if __name__ == '__main__':
     args = {'omega':1,
             'n':1.45,
-            'a': 2*np.pi*200/780
+            'a': 2*np.pi*200/850
             }
-    a = 2*np.pi*200/780
+    a = 2*np.pi*200/850
     m = exact_mode(**args)
     m.generate_mode()
-    m.plot_HankelImage()
+    print(m.E(2.))
+    #m.plot_HankelImage()
 """
     from matplotlib import pyplot as plt
 

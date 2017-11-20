@@ -3,6 +3,15 @@ sys.path.insert(0, 'core/')
 import one_D_scattering as ods
 import numpy as np
 
+import ctypes
+mkl_rt = ctypes.CDLL('libmkl_rt.so')
+mkl_get_max_threads = mkl_rt.mkl_get_max_threads
+def mkl_set_num_threads(cores):
+    mkl_rt.mkl_set_num_threads(ctypes.byref(ctypes.c_int(cores)))
+
+mkl_set_num_threads(4)
+print(mkl_get_max_threads()) # says 4
+
 """
 Next 3 functions are: Fourier Integral Transform (FIT), reverse FIT, 
 and convolution transformation in this particular task
@@ -43,6 +52,10 @@ def extract_delay(t, f):
     """
     return sum(t*abs(f)**2)/sum(abs(f)**2) - pdTime/2
 
+def extract_amplitude(t, f):
+    return max(abs(f) ** 2)
+
+
 if __name__ == '__main__':
 
     """
@@ -59,13 +72,13 @@ if __name__ == '__main__':
     freq = ods.freq
 
     #Number of atoms array to iterate
-    lenNumbers = 30
-    maxAtoms = 200
-    numberAtoms = np.linspace(10, maxAtoms, lenNumbers, dtype=int)
+    lenNumbers = 1
+    maxAtoms = 100
+    numberAtoms = np.linspace(100, maxAtoms+1, lenNumbers, dtype=int)
 
     #Distance between atoms (regular)
-    lenDist = 120
-    distbAtoms = np.linspace(0.3, 2, lenDist)
+    lenDist = 10
+    distbAtoms = np.linspace(0.5, 1.5, lenDist)
 
     #Arguments of one_D_scattering module
     args = {
@@ -82,14 +95,21 @@ if __name__ == '__main__':
     }
 
     delayArray = np.empty([lenNumbers, lenDist],dtype=float)
+    amplitudeArray = np.empty([lenNumbers, lenDist], dtype=float)
+    approxDelayArray = np.empty([lenNumbers, lenDist],dtype=float)
     for iAtom in range(lenNumbers):
         args['nat'] = numberAtoms[iAtom]
         for jDist in range(lenDist):
-            args['d'] = distbAtoms[jDist]
-            print('NoA =', numberAtoms[iAtom], 'Distance, in L/2 = ', 2*distbAtoms[jDist])
+            args['l0'] = distbAtoms[jDist]
+            print('NoA =', numberAtoms[iAtom], 'Distance, in mode wavelength units = ', 0.5*distbAtoms[jDist])
             elasticSc = ods.ensemble(**args)
             elasticSc.generate_ensemble()
             _t, _f = convolution(freq, elasticSc.Transmittance, gauss_pulse(freq, pdTime), vg=elasticSc.vg)
             delayArray[iAtom, jDist] = extract_delay(_t, _f)
+            amplitudeArray[iAtom, jDist] = extract_amplitude(_t, _f)
+            approxDelayArray[iAtom, jDist] = np.gradient(np.angle(elasticSc.Transmittance), freq[1]-freq[0])[139]
 
-    np.savez('delayFile.npz', delay=delayArray, numbers = numberAtoms, distances = distbAtoms)
+
+
+    np.savez('data/delayFile.npz', amplitude=amplitudeArray, delay=delayArray, numbers = numberAtoms, \
+             distances = distbAtoms, approxdelay = approxDelayArray)
