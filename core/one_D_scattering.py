@@ -622,7 +622,9 @@ class ensemble(object):
                 """
 
 
-
+                #ddLeftF_0p[i,j]:
+                #i contains the atom which is excited now and state of its neighbours
+                #j is the atom which jumps
                 #0, +
                 ddLeftF_0p = np.zeros([nat*3**nb, nat], dtype=np.complex);
                 ddLeftB_0p = np.zeros([nat*3**nb, nat], dtype=np.complex);
@@ -640,6 +642,7 @@ class ensemble(object):
                 ddLeftB_mm = np.zeros([nat*3**nb, nat], dtype=np.complex);
 
                 # Reduction of T-Raman-Matrix
+                # Summation over single-jump Raman channels
                 sum_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)))
 
             One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
@@ -672,15 +675,17 @@ class ensemble(object):
                     ________________________________________________________________
                     """
                     #loop over atoms, which change their pseudospin projection
-                    #for jp in range(nb+1):
+                    #they are neighbours of atom, from which final photon leaves
                     counter = 0
                     for jp in np.append(np.asarray([i],dtype=np.int),self.index[i,:]):
 
+
                         if jp!=i:
                             jc=counter
+                        #if the atom which change its orientation is the one, from which photon emits then do elif
                         elif jp==i:
-                            index_0 = (i+1)*3**nb - 1
-                            index_m = (i+1)*3**nb - 1
+                            index_0 = (i+1)*3**nb - 1 # combination number of neighbours state (all two's)
+                            index_m = (i+1)*3**nb - 1 #
                             j = i
 
                             ddLeftF_0m[index_0, jp] = -1j * d01 * np.exp(+1j * self.kv * self.x0[0, i] * self.rr[0, i]) * np.conjugate(self.ez[i])
@@ -702,6 +707,9 @@ class ensemble(object):
                             continue
 
                         counter += 1
+                        #here's non-trivial part.
+                        #the combination number of (s_1 ... s_p ... s_n) is \sum_{s_p} (2-s_p) 3^(p)
+                        #thus, the combination numbers of chain with lacuna in p are:
                         index_0 = (i)*3**nb - 1 + 3**nb - (2-1)*(3**(jc))
                         index_m = (i)*3**nb - 1 + 3**nb - (2-0)*(3**(jc))
 
@@ -929,8 +937,8 @@ freq = np.linspace(-2,2, 280)*gd
 
 #Validation (all = 1 iff ful theory, except SINGLE_RAMAN)
 
-RADIATION_MODES_MODEL = 0 # = 1 iff assuming our model of radiation modes =0 else
-VACUUM_DECAY = 0# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
+VACUUM_DECAY = 1# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
 SINGLE_RAMAN = True
 FIX_RANDOM = 1
@@ -958,8 +966,8 @@ if __name__ == '__main__':
 
     args = {
         
-            'nat':3, #number of atoms
-            'nb':2, #number of neighbours in raman chanel (for L-atom only)
+            'nat':5, #number of atoms
+            'nb':4, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
             'd' : 1.5, # distance from fiber
