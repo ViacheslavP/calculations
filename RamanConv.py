@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #Consider chain with 50 atoms placed evenly with its distance lambda/2
 ods.RABI = 0.
 
-freq = np.linspace(-2.5,2.5, 480)
+freq = np.linspace(-3.5,3.5, 480)
 args = {
 
     'nat': 50,  # number of atoms
@@ -15,7 +15,7 @@ args = {
     's': 'chain',  # Stands for atom positioning : chain, nocorrchain and doublechain
     'dist': 0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
     'd': 1.5,  # distance from the fiber
-    'l0': 1.0/2,  # mean distance between atoms (in lambda_m /2 units)
+    'l0': 2.0/2,  # mean distance between atoms (in lambda_m /2 units)
     'deltaP': freq,  # array of freq.
     'typ': 'L',  # L or V for Lambda and V atom resp.
     'ff': 0.3
@@ -29,6 +29,7 @@ VAR is the variant of meta-calculation
 3. Constructive and destructive interference
 4. ...
 """
+ods.RABI = 4.
 VAR = 3
 if VAR == 1:
 
@@ -47,19 +48,23 @@ if VAR == 1:
 
 
     plt.plot(freq, ens_two.fullTransmittance-ens_zero.fullTransmittance)
-    plt.plot(freq, ens_four.fullTransmittance-ens_zero.fullTransmittance)
+    plt.plot(freq, ens_four.fullTransmittance-ens_two.fullTransmittance)
     plt.show()
 
     plt.plot(freq, ens_two.fullReflection-ens_zero.fullReflection)
-    plt.plot(freq, ens_four.fullReflection-ens_zero.fullReflection)
+    plt.plot(freq, ens_four.fullReflection-ens_two.fullReflection)
     plt.show()
 
-    plt.plot(freq, ens_two.fullTransmittance)
-    plt.plot(freq, abs(ens_two.Transmittance)**2)
-    plt.show()
+    plt.plot(freq, ens_two.fullTransmittance, label='T_NB2')
+    plt.plot(freq, abs(ens_two.Transmittance)**2, label='el T_NB2')
+    plt.plot(freq, ens_zero.fullTransmittance, label='T_NB0')
+    plt.plot(freq, ens_four.fullTransmittance, label = 'T_NB4')
 
-    plt.plot(freq, ens_two.fullReflection)
-    plt.plot(freq, abs(ens_two.Reflection)**2)
+    plt.plot(freq, ens_two.fullReflection, label='R_NB2')
+    plt.plot(freq, abs(ens_two.Reflection)**2, label = 'el R_NB2')
+    plt.plot(freq, ens_zero.fullReflection, label='R_NB0')
+    plt.plot(freq, ens_four.fullReflection, label = 'R_NB4')
+    plt.legend()
     plt.show()
 
 elif VAR == 2:
@@ -96,27 +101,38 @@ elif VAR == 2:
 
 elif VAR == 3:
 
-    innerDistance = np.linspace(0.5, 1.5, 120)
+    innerDistance = np.linspace(0.5, 1.5, 240)
     ref = []
     ref_el = []
+    ref_diff = []
     trans = []
     trans_el = []
+    trans_diff = []
     for dist in innerDistance:
         args['l0'] = dist
 
         ens = ods.ensemble(**args)
+
         ens.generate_ensemble()
         ref.append(np.amax((ens.fullReflection)))
         trans.append(np.amin((ens.fullTransmittance)))
         ref_el.append(np.amax(abs(ens.Reflection) ** 2))
         trans_el.append(np.amin(abs(ens.Transmittance) ** 2))
-
+        ref_diff.append(np.amax((ens.fullReflection))-np.amax(abs(ens.Reflection) ** 2))
+        trans_diff.append(np.amin((ens.fullTransmittance)) - np.amin(abs(ens.Transmittance) ** 2) )
     plt.plot(innerDistance, ref, 'm-', label=r'Total Maximum Reflection')
     plt.plot(innerDistance, ref_el, 'm--', label=r'Elastic Rayleigh Maximum Reflection')
+    plt.plot(innerDistance, ref_diff, label='Single jump Raman process')
     plt.legend()
     plt.show()
+
+
 
     plt.plot(innerDistance, trans, 'k-', label='Total Maximum Transmission')
     plt.plot(innerDistance, trans_el, 'k--', label='Elastic Maximum Transmission')
+    plt.plot(innerDistance, trans_diff)
     plt.legend()
     plt.show()
+
+elif VAR == 4:
+    pass

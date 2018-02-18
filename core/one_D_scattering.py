@@ -430,7 +430,7 @@ class ensemble(object):
                     from sigmaMatrix import returnForLambda
                     self.D = returnForLambda(Di, np.array(self.index, dtype=np.int), nb)
                 except:
-                    print("sigmaMatrix.pyx not compiled! Using pure python to form Simgma-matrix.")
+                    print("sigmaMatrix.pyx not compiled! Using pure python to form Sigma-matrix.")
 
                     from itertools import product as combi
                     state = np.asarray([i for i in combi(range(3),repeat=nb)])
@@ -475,6 +475,7 @@ class ensemble(object):
 
             else:
                 raise NameError('No such type')
+
             
         
         def S_matrix_for_V(self):
@@ -664,7 +665,9 @@ class ensemble(object):
 
                 # Reduction of T-Raman-Matrix
                 # Summation over single-jump Raman channels
-                sum_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)))
+
+                Tmatrix = lambda A: np.square(np.absolute(A))
+                Tmatrix_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)))
 
             One = (np.identity(nat*3**nb)) # Unit in Lambda-atom with nb neighbours
             Sigmad = 0*(np.identity(nat*3**nb,dtype=np.complex))
@@ -785,6 +788,7 @@ class ensemble(object):
 
             self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
+            self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
             for k in range(len(self.deltaP)):
                 
@@ -827,18 +831,24 @@ class ensemble(object):
 
 
 
+                    #Raman Reflection probability
+                    if RAMAN_BACKSCATTERING:
+                        self.RamanBackscattering[k,:] = Tmatrix(np.dot(Resolventa, ddLeftB_0m) * 2 * np.pi * hbar * kv) + \
+                             Tmatrix(np.dot(Resolventa, ddLeftB_0p) * 2 * np.pi * hbar * kv) + \
+                             Tmatrix(np.dot(Resolventa, ddLeftB_mm) * 2 * np.pi * hbar * kv) + \
+                             Tmatrix(np.dot(Resolventa, ddLeftB_mp) * 2 * np.pi * hbar * kv  )
 
-                    TF2_0m = sum_reduce(np.dot(Resolventa, ddLeftF_0m) * 2 * np.pi * hbar * kv)
-                    TB2_0m = sum_reduce(np.dot(Resolventa, ddLeftB_0m) * 2 * np.pi * hbar * kv)
+                    TF2_0m = Tmatrix_reduce(np.dot(Resolventa, ddLeftF_0m) * 2 * np.pi * hbar * kv)
+                    TB2_0m = Tmatrix_reduce(np.dot(Resolventa, ddLeftB_0m) * 2 * np.pi * hbar * kv)
 
-                    TF2_0p = sum_reduce(np.dot(Resolventa, ddLeftF_0p) * 2 * np.pi * hbar * kv)
-                    TB2_0p = sum_reduce(np.dot(Resolventa, ddLeftB_0p) * 2 * np.pi * hbar * kv)
+                    TF2_0p = Tmatrix_reduce(np.dot(Resolventa, ddLeftF_0p) * 2 * np.pi * hbar * kv)
+                    TB2_0p = Tmatrix_reduce(np.dot(Resolventa, ddLeftB_0p) * 2 * np.pi * hbar * kv)
 
-                    TF2_mm = sum_reduce(np.dot(Resolventa, ddLeftF_mm) * 2 * np.pi * hbar * kv)
-                    TB2_mm = sum_reduce(np.dot(Resolventa, ddLeftB_mm) * 2 * np.pi * hbar * kv)
+                    TF2_mm = Tmatrix_reduce(np.dot(Resolventa, ddLeftF_mm) * 2 * np.pi * hbar * kv)
+                    TB2_mm = Tmatrix_reduce(np.dot(Resolventa, ddLeftB_mm) * 2 * np.pi * hbar * kv)
 
-                    TF2_mp = sum_reduce(np.dot(Resolventa, ddLeftF_mp) * 2 * np.pi * hbar * kv)
-                    TB2_mp = sum_reduce(np.dot(Resolventa, ddLeftB_mp) * 2 * np.pi * hbar * kv)
+                    TF2_mp = Tmatrix_reduce(np.dot(Resolventa, ddLeftF_mp) * 2 * np.pi * hbar * kv)
+                    TB2_mp = Tmatrix_reduce(np.dot(Resolventa, ddLeftB_mp) * 2 * np.pi * hbar * kv)
 
 
 
@@ -854,7 +864,7 @@ class ensemble(object):
 
                     self.SideScattering[k] = 1 - (self.fullTransmittance[k]) - (self.fullReflection[k])
                                           
-                ist = 100*k / len(self.deltaP)
+                ist = 100*(k+1) / len(self.deltaP)
                 sys.stdout.write("\r%d%%" % ist)
                 sys.stdout.flush()
                 
@@ -936,7 +946,7 @@ class ensemble(object):
             import matplotlib.pyplot as plt
 
             plt.plot(self.deltaP, (abs(self.iReflection) ** 2), 'r-', label='R', lw=1.5)
-            #plt.plot(self.deltaP, abs(self.iTransmittance) ** 2, 'm-', label='T', lw=1.5)
+            plt.plot(self.deltaP, abs(self.iTransmittance) ** 2, 'm-', label='T', lw=1.5)
 
             #plt.plot(self.deltaP, abs(self.fullReflection) , 'r--', label='R', lw=1.5)
             #plt.plot(self.deltaP, abs(self.fullTransmittance) , 'm--', label='T', lw=1.5)
@@ -990,7 +1000,7 @@ d1m0 = d01m
 
 #atomic ensemble properties
 
-freq = np.linspace(-1.5,1.5, 280)*gd
+freq = np.linspace(-13.5,13.5, 280)*gd
 
 #Validation (all = 1 iff ful theory, except SINGLE_RAMAN)
 
@@ -998,9 +1008,13 @@ RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 els
 VACUUM_DECAY = 1# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
 SINGLE_RAMAN = True
+RAMAN_BACKSCATTERING = False
 FIX_RANDOM = 1
-RABI = 1e-16
-DC = 0.
+RABI = 1e-16 #Rabi frequency
+DC = 0. #Rabi detuning
+
+if not SINGLE_RAMAN and RAMAN_BACKSCATTERING:
+    SINGLE_RAMAN = True
 
 FULL = 0
 FIRST = 1 # = 0 iff assuming full subtraction
@@ -1023,15 +1037,15 @@ if __name__ == '__main__':
 
     args = {
         
-            'nat':5, #number of atoms
-            'nb':4, #number of neighbours in raman chanel (for L-atom only)
+            'nat':500, #number of atoms
+            'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
-            'd' : 1.5, # distance from fiber
-            'l0': 3.000/2, # mean distance between atoms (in lambda_m /2 units)
+            'd' : 2.0, # distance from fiber
+            'l0': 2.002/2, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq.
             'typ':'L',  # L or V for Lambda and V atom resp.
-            'ff': 0.3
+            'ff': 0.3 #filling factor (for ff_chain only)
             }
 
     

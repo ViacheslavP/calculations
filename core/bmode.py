@@ -153,7 +153,6 @@ class exact_mode(object):
         self.E = lambda r: 1j * E(r) / _norm
         self.dE = lambda r: 1j * dE(r) / _norm
         self.Ez = lambda r: Ez(r) / _norm
-        print(_norm )
         self.Ephi = lambda r: 1j / np.sqrt(2) * (self.E(r) + self.dE(r))
         self.Er = lambda r: 1 / np.sqrt(2) * (self.E(r) - self.dE(r))
 
