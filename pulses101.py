@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 
 
+
 """
 Control field and calculation parameters:
 """
