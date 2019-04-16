@@ -17,7 +17,7 @@ ods.PAIRS = False
 ods.RABI = 1 # Rabi frequency
 ods.DC = 0# Control field detuning
 SHIFT = 0# Carrier frequency of a photon
-freq = np.linspace(-20.5,20.5, 1980)
+freq = np.linspace(-20.5,20.5, 980)
 #Pulse duration
 pdTime = 10 # pulse time, gammma^-1
 
