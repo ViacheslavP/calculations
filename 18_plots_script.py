@@ -54,12 +54,14 @@ args = {
 args_commensurate = args.copy()
 args_disorder = args.copy()
 args_noncommensurate = args.copy()
+args_lambda = args.copy()
 
 args_noncommensurate['l0'] = 2.002/2. #lambda / 2 + 0.01 * lambda / 2
 args_disorder['s'] = 'nocorrchain'
+args_lambda['l0'] = 2.
 
 
-
+ods.RABI = 0.
 for noa in numberOfAtoms:
     for switch in ddInteraction:
         if switch=='on':
@@ -72,14 +74,17 @@ for noa in numberOfAtoms:
         args_commensurate['nat'] = noa
         args_disorder['nat'] = noa
         args_noncommensurate['nat'] = noa
+        args_lambda['nat'] = noa
 
         ens_commensurate = ods.ensemble(**args_commensurate)
         ens_noncommensurate = ods.ensemble(**args_noncommensurate)
         ens_disorder = ods.ensemble(**args_disorder)
+        ens_lambda = ods.ensemble(**args_lambda)
 
         ens_commensurate.generate_ensemble()
         ens_disorder.generate_ensemble()
         ens_noncommensurate.generate_ensemble()
+        ens_lambda.generate_ensemble()
 
         #Rayleigh+Raman
 
@@ -92,6 +97,8 @@ for noa in numberOfAtoms:
         rmnTransDisorder = ens_disorder.fullTransmittance
         rmnReflDisorder = ens_disorder.fullReflection
 
+        rmnTransLambda = ens_lambda.fullTransmittance
+        rmnReflLambda = ens_lambda.fullReflection
         #Rayleigh
 
         rlghTransCommensurate = abs(ens_commensurate.Transmittance)**2
@@ -103,6 +110,11 @@ for noa in numberOfAtoms:
         rlghTransDisorder = abs(ens_disorder.Transmittance)**2
         rlghReflDisorder = abs(ens_disorder.Reflection)**2
 
+        rlghTransLambda = abs(ens_lambda.Transmittance)**2
+        rlghReflLambda = abs(ens_lambda.Reflection)**2
+
+
+
 
 
         np.savez(plots_data+'/NOA=%d' % noa+'%s.npz' % switch,
@@ -113,39 +125,104 @@ for noa in numberOfAtoms:
              rmnReflNoncommensurate = rmnReflNoncommensurate,
              rmnTransDisorder = rmnTransDisorder,
              rmnReflDisorder = rmnReflDisorder,
+             rmnTransLambda = rmnTransLambda,
+             rmnReflLambda = rmnReflLambda,
              rlghTransCommensurate = rlghTransCommensurate,
              rlghReflCommensurate = rlghReflCommensurate,
              rlghTransNoncommensurate = rlghTransNoncommensurate,
              rlghReflNoncommensurate = rlghReflNoncommensurate,
              rlghTransDisorder = rlghTransDisorder,
-             rlghReflDisorder = rlghReflDisorder)
+             rlghReflDisorder = rlghReflDisorder,
+             rlghTransLambda = rlghTransLambda,
+             rlghReflLambda = rlghReflLambda
+        )
 
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_frequencies.txt' % switch  ,freq, newline=separator,fmt='%1.8f')
 
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnTransCommensurate.txt' % switch,rmnTransCommensurate, newline=separator,
-               fmt='%1.8f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnReflCommensurate.txt' % switch, rmnReflCommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnTransNoncommensurate.txt' % switch, rmnTransNoncommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnReflNoncommensurate.txt' % switch, rmnReflNoncommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnTransDisorder.txt' % switch, rmnTransDisorder, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rmnReflDisorder.txt' % switch, rmnReflDisorder, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghTransCommensurate.txt' % switch, rlghTransCommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghReflCommensurate.txt' % switch, rlghReflCommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghTransNoncommensurate.txt' % switch, rlghTransNoncommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghReflNoncommensurate.txt' % switch, rlghReflNoncommensurate, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghTransDisorder.txt' % switch, rlghTransDisorder, newline=separator,
-               fmt='%1.6f')
-        np.savetxt(plots_arrays + '/NOA=%d' % noa + 'ddInt=%s_rlghReflDisorder.txt' % switch, rlghReflDisorder, newline=separator,
-               fmt='%1.6f')
 
+
+
+ods.RABI = 4.
+for noa in numberOfAtoms:
+    for switch in ddInteraction:
+        if switch=='on':
+            ods.RADIATION_MODES_MODEL = 1.
+        elif switch=='off':
+            ods.RADIATION_MODES_MODEL = 0
+        else:
+            raise NameError('Something went wrong!')
+
+        args_commensurate['nat'] = noa
+        args_disorder['nat'] = noa
+        args_noncommensurate['nat'] = noa
+        args_lambda['nat'] = noa
+
+
+
+        ens_commensurate = ods.ensemble(**args_commensurate)
+        ens_noncommensurate = ods.ensemble(**args_noncommensurate)
+        ens_disorder = ods.ensemble(**args_disorder)
+        ens_lambda = ods.ensemble(**args_lambda)
+
+        ens_commensurate.generate_ensemble()
+        ens_disorder.generate_ensemble()
+        ens_noncommensurate.generate_ensemble()
+        ens_lambda.generate_ensemble()
+
+        #Rayleigh+Raman
+
+        rmnTransCommensurate = ens_commensurate.fullTransmittance
+        rmnReflCommensurate = ens_commensurate.fullReflection
+
+        rmnTransNoncommensurate = ens_noncommensurate.fullTransmittance
+        rmnReflNoncommensurate = ens_noncommensurate.fullReflection
+
+        rmnTransDisorder = ens_disorder.fullTransmittance
+        rmnReflDisorder = ens_disorder.fullReflection
+
+        rmnTransLambda = ens_lambda.fullTransmittance
+        rmnReflLambda = ens_lambda.fullReflection
+        #Rayleigh
+
+        rlghTransCommensurate = abs(ens_commensurate.Transmittance)**2
+        rlghReflCommensurate = abs(ens_commensurate.Reflection)**2
+
+        rlghTransNoncommensurate = abs(ens_noncommensurate.Transmittance)**2
+        rlghReflNoncommensurate = abs(ens_noncommensurate.Reflection)**2
+
+        rlghTransDisorder = abs(ens_disorder.Transmittance)**2
+        rlghReflDisorder = abs(ens_disorder.Reflection)**2
+
+        rlghTransLambda = abs(ens_lambda.Transmittance)**2
+        rlghReflLambda = abs(ens_lambda.Reflection)**2
+
+        elasticTransCommensurate = ens_commensurate.Transmittance
+        elasticTransNoncommensurate = ens_noncommensurate.Transmittance
+        elasticTransDisorer = ens_disorder.Transmittance
+        elasticTransLambda = ens_lambda.Transmittance
+
+        np.savez(plots_data + '/EIT_NOA=%d' % noa + '%s.npz' % switch,
+                 frequencies=freq,
+                 rmnTransCommensurate=rmnTransCommensurate,
+                 rmnReflCommensurate=rmnReflCommensurate,
+                 rmnTransNoncommensurate=rmnTransNoncommensurate,
+                 rmnReflNoncommensurate=rmnReflNoncommensurate,
+                 rmnTransDisorder=rmnTransDisorder,
+                 rmnReflDisorder=rmnReflDisorder,
+                 rmnTransLambda=rmnTransLambda,
+                 rmnReflLambda=rmnReflLambda,
+                 rlghTransCommensurate=rlghTransCommensurate,
+                 rlghReflCommensurate=rlghReflCommensurate,
+                 rlghTransNoncommensurate=rlghTransNoncommensurate,
+                 rlghReflNoncommensurate=rlghReflNoncommensurate,
+                 rlghTransDisorder=rlghTransDisorder,
+                 rlghReflDisorder=rlghReflDisorder,
+                 rlghTransLambda=rlghTransLambda,
+                 rlghReflLambda=rlghReflLambda,
+                 elasticTransCommensurate = elasticTransCommensurate,
+                 elasticTransDisorer = elasticTransDisorer,
+                 elasticTransLambda = elasticTransLambda,
+                 elasticTransNoncommensurate = elasticTransNoncommensurate
+                 )
 np.savez(plots_data+'/meta.npz', numberOfAtoms = numberOfAtoms, ddInteraction = ddInteraction)
 print('DONE!')
+

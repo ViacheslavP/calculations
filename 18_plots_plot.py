@@ -24,7 +24,7 @@ ddInteraction = meta['ddInteraction']
 
 for noa in numberOfAtoms:
     for switch in ddInteraction:
-        npzfile = np.load('data/NOA=%d' % noa + '%s.npz' % switch)
+        npzfile = np.load('data/EIT_NOA=%d' % noa + '%s.npz' % switch)
         freq = npzfile['frequencies']
         rmnTransCommensurate = npzfile['rmnTransCommensurate']
         rmnReflCommensurate = npzfile['rmnReflCommensurate']

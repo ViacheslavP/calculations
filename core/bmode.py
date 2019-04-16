@@ -3,6 +3,7 @@
 Created on Tue Dec 13 16:45:02 2016
 
 @author: ViacheslavP
+
 """
 import numpy as np
 from scipy.special import jn, kn
@@ -78,7 +79,7 @@ class exact_mode(object):
         fo = sp.diff(ceq, _k)
         fk = sp.diff(ceq, x)
 
-        bessel = {'besselj': jn, 'besselk': kn, 'sqrt': np.sqrt}
+        bessel = {'besselj': jn, 'besselk': kn}
         libraries = [bessel, "numpy"]
 
 
@@ -130,6 +131,7 @@ class exact_mode(object):
         qa = a * np.sqrt(k**2- omega**2)
         s = (1 / qa / qa + 1 / ha / ha) / \
             ((-kn(0, qa) - kn(2, qa)) / 2 / qa / kn(1, qa) + (jn(0, ha) - jn(2, ha)) / 2 / ha / jn(1, ha))
+        print(qa/a)
 
         efin = lambda r: -1 * self.k / 2 / ha * a * (1 - s) * jn(0, ha * r / a) * np.sqrt(2) / jn(1, ha)
         efout = lambda r: -1 * self.k / 2 / qa * a * (1 - s) * kn(0, qa * r / a) * np.sqrt(2) / kn(1, qa)
@@ -258,12 +260,21 @@ class exact_mode(object):
 if __name__ == '__main__':
     args = {'omega':1,
             'n':1.45,
-            'a': 2*np.pi*200/850
+            'a': 2*np.pi*200/780
             }
-    a = 2*np.pi*200/850
+
+    a = 2*np.pi*200/780
     m = exact_mode(**args)
     m.generate_mode()
-    print(m.E(2.))
+
+    from matplotlib import rcParams
+    rcParams.update({'font.size': 18})
+    from matplotlib import pyplot as plt
+    rs = np.linspace(0, 10,100)
+    plt.plot(rs, 1j*(m.E(rs)))
+    plt.plot(rs, -1j*(m.dE(rs)))
+    plt.plot(rs, (m.Ez(rs)))
+    plt.show()
     #m.plot_HankelImage()
 """
     from matplotlib import pyplot as plt

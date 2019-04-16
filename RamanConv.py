@@ -29,11 +29,14 @@ VAR is the variant of meta-calculation
 3. Constructive and destructive interference
 4. ...
 """
-ods.RABI = 4.
+ods.RABI = 0.
+ods.PAIRS = False
+ods.SINGLE_RAMAN = True
 VAR = 3
 if VAR == 1:
 
     #First of all, lets find a role of neighbours
+    ods.PAIRS = False
     args['nb'] = 4
     ens_four = ods.ensemble(**args)
     ens_four.generate_ensemble()
@@ -46,25 +49,34 @@ if VAR == 1:
     ens_zero = ods.ensemble(**args)
     ens_zero.generate_ensemble()
 
+    ods.PAIRS = True
+    args['nb'] = 0
+    ens_pairs = ods.ensemble(**args)
+    ens_pairs.generate_ensemble()
 
     plt.plot(freq, ens_two.fullTransmittance-ens_zero.fullTransmittance)
     plt.plot(freq, ens_four.fullTransmittance-ens_two.fullTransmittance)
+    plt.plot(freq, - ens_zero.fullTransmittance + ens_pairs.fullTransmittance)
     plt.show()
 
     plt.plot(freq, ens_two.fullReflection-ens_zero.fullReflection)
     plt.plot(freq, ens_four.fullReflection-ens_two.fullReflection)
+    plt.plot(freq, - ens_zero.fullReflection + ens_pairs.fullReflection)
     plt.show()
 
+
+    plt.plot(freq, ens_pairs.fullTransmittance, label = 'T PAIRS')
     plt.plot(freq, ens_two.fullTransmittance, label='T_NB2')
     plt.plot(freq, abs(ens_two.Transmittance)**2, label='el T_NB2')
     plt.plot(freq, ens_zero.fullTransmittance, label='T_NB0')
     plt.plot(freq, ens_four.fullTransmittance, label = 'T_NB4')
 
+    plt.plot(freq, ens_pairs.fullReflection, label = 'R PAIRS')
     plt.plot(freq, ens_two.fullReflection, label='R_NB2')
     plt.plot(freq, abs(ens_two.Reflection)**2, label = 'el R_NB2')
     plt.plot(freq, ens_zero.fullReflection, label='R_NB0')
     plt.plot(freq, ens_four.fullReflection, label = 'R_NB4')
-    plt.legend()
+    #plt.legend()
     plt.show()
 
 elif VAR == 2:
@@ -101,7 +113,7 @@ elif VAR == 2:
 
 elif VAR == 3:
 
-    innerDistance = np.linspace(0.5, 1.5, 240)
+    innerDistance = np.linspace(3.5, 5.5, 140)
     ref = []
     ref_el = []
     ref_diff = []
@@ -131,8 +143,48 @@ elif VAR == 3:
     plt.plot(innerDistance, trans, 'k-', label='Total Maximum Transmission')
     plt.plot(innerDistance, trans_el, 'k--', label='Elastic Maximum Transmission')
     plt.plot(innerDistance, trans_diff)
-    plt.legend()
+    #plt.legend()
     plt.show()
 
 elif VAR == 4:
-    pass
+
+    loss1 = []
+    loss2 = []
+    loss3 = []
+    loss4 = []
+    args['nb'] = 0
+    args['d'] = 1.5
+    maxAtoms = 60
+    numberOfAtoms = range(10, maxAtoms+5, 2)
+    for noa in numberOfAtoms:
+
+        args['nat'] = noa
+        args['l0'] = (2.0 / 2)
+        ens = ods.ensemble(**args)
+        ens.generate_ensemble()
+        loss1.append(np.amin((ens.fullTransmittance)))
+        args['l0'] = (2.002/2)
+        ens = ods.ensemble(**args)
+        ens.generate_ensemble()
+        loss2.append(np.amin((ens.fullTransmittance)))
+        args['l0'] = (2.02/2)
+        ens = ods.ensemble(**args)
+        ens.generate_ensemble()
+        loss3.append(np.amin((ens.fullTransmittance)))
+        args['l0'] = (2.2/2)
+        ens = ods.ensemble(**args)
+        ens.generate_ensemble()
+        loss4.append(np.amin((ens.fullTransmittance)))
+
+
+        print(noa, '/%d atoms done' % maxAtoms)
+
+
+    plt.plot(numberOfAtoms, loss1, label=r'$\Delta \lambda = 0 \lambda$')
+    plt.plot(numberOfAtoms, loss2, label=r'$\Delta \lambda = 1/1000 \lambda$')
+    plt.plot(numberOfAtoms, loss3, label=r'$\Delta \lambda = 1/100 \lambda $')
+    plt.plot(numberOfAtoms, loss4, label=r'$\Delta  \lambda = 1/10 \lambda$')
+    plt.xlabel('Number of atoms')
+    plt.legend()
+    plt.show()
+    ens.visualize()

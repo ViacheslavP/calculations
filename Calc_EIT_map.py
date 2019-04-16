@@ -39,12 +39,16 @@ def convolution(freq, kernel, pulse, vg=0.7):
     fim = fim[_sw]
     return time, fim
 
+
+def rect_pulse(om, T0):
+    return 1 / (1j * om) * (np.exp(1j*om*T0) - 1)
+
 def gauss_pulse(om, T0):
     """
     Inc. pulse as function of $\omega$ (conj. to time, frequency) (Fourier image)
     T0 - pulse parameter (mean square duration)
     """
-    return  np.exp((1j * om * T0 * (1j * om * T0 + 2 * np.pi**2)) / (4*np.pi**2)) * ((2 / np.pi) * T0**2)**(1/4)
+    return  np.exp((1j * om * T0 * (1j * om * T0 + 2 * np.pi**2))/ (4*np.pi**2)) * ((2 / np.pi) * T0**2)**(1/4)
 
 def extract_delay(t, f):
     """
@@ -54,14 +58,23 @@ def extract_delay(t, f):
 
 def extract_amplitude(t, f):
     return max(abs(f) ** 2)
+DEBUG=True
 
+pdTime = 4 * np.pi
+if DEBUG:
+    import matplotlib.pyplot as plt
+    freq = np.linspace(-103.5,103.5, 980)
+    timeInitial, profInitial = convolution(freq, np.ones_like(freq, dtype=complex), rect_pulse(freq, pdTime), vg=0.7)
+    plt.plot(timeInitial, abs(profInitial)**2)
+    plt.show()
 
-if __name__ == '__main__':
+if __name__ == '__main__' and not DEBUG:
 
     """
     Pulse parameters:
     """
     #Rabi frequency
+    ods.PAIRS = False
     ods.RABI = 4.
     ods.SINGLE_RAMAN = False
 
@@ -83,7 +96,7 @@ if __name__ == '__main__':
     #Arguments of one_D_scattering module
     args = {
 
-    'nat': 20,  # number of atoms
+    'nat': 200,  # number of atoms
     'nb': 2,  # number of neighbours in raman chanel (for L-atom only)
     's': 'chain',  # Stands for atom positioning : chain, nocorrchain and doublechain
     'dist': 0.,  # sigma for displacement (choose 'chain' for gauss displacement.)

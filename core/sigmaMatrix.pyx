@@ -100,5 +100,49 @@ def returnForLambda(np.ndarray[DTYPE_t, ndim=4] Di,
     cdef int nn = Di.shape[0]
     return creturnForLambda(Di, nn, nb, index)
 
+"""
+_______________________________________________________________________________
+---------------for Lambda (with pairs and without neighbours)------------------
+_______________________________________________________________________________
+"""
+
+cdef np.ndarray[DTYPE_t, ndim=2] creturnPairsForLambda(np.ndarray[DTYPE_t, ndim=4] Di,
+                                                  int nat):
+
+    cdef int dim  = nat + 2 * nat * (nat - 1)
+    cdef np.ndarray[DTYPE_t, ndim=2] D = np.zeros([dim,dim],dtype=DTYPE)
+    cdef int counterOne, counterTwo,n1,n2,n1a,n2a,m1,m2
+    for counterOne in range(dim):
+        for counterTwo in range(dim):
+
+            if counterOne < nat:
+                m1 = 2
+                n1 = counterOne
+                n1a = counterTwo
+            elif counterOne >= nat:
+                n1a = (counterOne - nat) // (2*nat)
+                n1 =  (counterOne - nat) % (2*nat) // 2
+                m1 =  (counterOne - nat) % (2*nat) % 2
+
+
+            if counterTwo < nat:
+                m2 = 2
+                n2 = counterTwo
+                n2a = counterOne
+            elif counterTwo >= nat:
+                n2a = (counterTwo - nat) // (2*nat)
+                n2 =  (counterTwo - nat) % (2*nat) // 2
+                m2 =  (counterTwo - nat) % (2*nat) % 2
+
+            if n1 == n2a and n2 == n1a:
+                D[counterOne, counterTwo] = Di[n1,n2,m1,m2]
+
+
+
+def returnPairsForLambda(np.ndarray[DTYPE_t, ndim=4] Di):
+    cdef int nn = Di.shape[0]
+    return creturnPairsForLambda(Di, nn)
+
+
 
 
