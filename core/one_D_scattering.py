@@ -1444,7 +1444,7 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':500, #number of atoms
+            'nat':10, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
