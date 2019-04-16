@@ -39,10 +39,11 @@ args = {
     }
 
 
-
+#calculate spectra
 elasticSc = ods.ensemble(**args)
 elasticSc.generate_ensemble()
 
+#Convolve pulse fourier transformation with transmittance, reflection and 1 (to obtain initial temporal profile)
 _, ft = convolution(freq, elasticSc.Transmittance, pulse(freq+SHIFT, pdTime))
 _, fr = convolution(freq, elasticSc.Reflection, pulse(freq+SHIFT, pdTime))
 ti, fi = convolution(freq, np.ones_like(freq), pulse(freq+SHIFT, pdTime))
