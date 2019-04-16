@@ -43,6 +43,10 @@ def gauss_pulse(om, gamma):
 def inverse_pulse(om, gamma):
     return 1/(om - 1j*gamma/2)
 
+def gauss_pulse_v2(om, tau):
+    #fourier of Exp[-2Ln2*t^2/tau^2]
+    return np.exp((-tau**2 * om)/(8*np.log(2)))
+
 def delay(freq, shifts, kernel, T0, vg=0.7):
     times = np.empty([len(shifts)], dtype=np.float32)
     fid = np.empty([len(shifts)], dtype=np.float32)
