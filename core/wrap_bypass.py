@@ -1,12 +1,40 @@
 def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
 
-    import ctypes
     import numpy as np
 
+
     try:
-        raise TypeError
+        if dim <= 150:
+            print("Dimensionality is too small to use CUDA")
+            raise ValueError
+        import ctypes
         calcalib = ctypes.cdll.LoadLibrary('/home/viacheslav/Projects/PycharmProjects/calculations/core/libbypass.so')
-        scV = np.empty(dim*nof, dtype=np.complex64)
+        print("Using CUDA sparsity backend...")
+    except:
+        scV = np.empty((dim, nof), dtype=np.complex)
+        try:
+            #TODO: Make this part work!
+            raise MemoryError
+            resolvent = np.empty((nof, dim,dim), dtype=np.complex)
+            freq_scaled = (freq + rabi[0] ** 2 / (4 * (freq - dc)) - 0.5j * gamma)
+
+            resolvent = np.broadcast_to(freq_scaled, (nof, dim, dim)) + np.broadcast_to(Sigma, (nof, dim, dim))
+            print(np.shape(resolvent))
+            scV = np.transpose(np.linalg.solve(resolvent, ddRight))
+
+        except MemoryError:
+            from scipy.sparse import csr_matrix
+            from scipy.sparse.linalg import spsolve
+
+            print("Memory Error was found. Using iterations:")
+            for i, om in enumerate(freq):
+                resolvent = csr_matrix(np.eye(dim) * (-om + rabi[0] ** 2 / (4 * (om - dc)) - 0.5j * gamma) + Sigma)
+                scV[:, i] = spsolve(resolvent, ddRight)
+
+        return scV
+
+    else:
+        scV = np.empty(dim * nof, dtype=np.complex64)
 
         calcalib.scProblem_solve.argtypes = [ctypes.c_int,
                                          ctypes.c_int,
@@ -33,10 +61,4 @@ def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
 
         return np.transpose(np.reshape(scV, (nof, dim)))
 
-    except:
 
-        scV = np.ones((dim,nof), dtype=np.complex64)
-        for i,om in enumerate(freq):
-            resolvent = np.eye(dim)*(-om + rabi[0]**2 / (4*(om - dc)) - 0.5j*gamma) + Sigma
-            scV[:,i] = np.linalg.solve(resolvent, ddRight)
-        return scV

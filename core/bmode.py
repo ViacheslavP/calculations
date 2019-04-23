@@ -230,6 +230,7 @@ class exact_mode(object):
         plt.show()
         #self._expressions_(self.sub_k)
     def plot_HankelImage(self):
+
         from scipy.integrate import quad
         from matplotlib import pyplot as plt
         he = lambda x: 1 + (1.45**2-1)* np.piecewise(x, [x < 1, x > 1], [1, 0])
@@ -249,6 +250,15 @@ class exact_mode(object):
         plt.plot(q,ez, label=r'$D^{\prime \prime}(q)$')
         plt.legend(fontsize=18)
         plt.show()
+
+    def HankelImage(self, qs):
+        from scipy.integrate import quad
+        e = np.zeros_like(qs)
+        he = lambda x: 1 + (1.45 ** 2 - 1) * np.piecewise(x, [x < 1, x > 1], [1, 0])
+        for i,q in enumerate(qs):
+            e[i] = quad(lambda x: -np.imag(self.E(x) * x * jn(0, x * q)) * he(x) * 2 * np.pi, 0, np.inf)[0]
+
+        return e
 
 
 

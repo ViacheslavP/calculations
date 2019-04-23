@@ -9,10 +9,6 @@ TODO:
 
 
 """
-    
-    
-from scipy.sparse import linalg as alg
-from scipy.sparse import csc_matrix as csc
 
 import numpy as np
 from time import time
@@ -178,7 +174,7 @@ class ensemble(object):
 
 
             elif s == 'peculiar':
-                from densityIter import rhoMCMC
+                from Garbage.densityIter import rhoMCMC
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
                 z = 2*step*rhoMCMC(nat)

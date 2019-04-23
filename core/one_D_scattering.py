@@ -226,7 +226,7 @@ class ensemble(object):
 
 
             elif s == 'peculiar':
-                from densityIter import rhoMCMC
+                from Garbage.densityIter import rhoMCMC
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
                 z = 2*step*rhoMCMC(nat)
@@ -724,8 +724,6 @@ class ensemble(object):
             :return:
             fullTransmittance and fullReflection
             """
-            import sys
-
 
             nat = self.nat
             nb = self.nb
@@ -1026,7 +1024,6 @@ class ensemble(object):
             :return:
             fullTransmittance and fullReflection
             """
-            import sys
 
             nat = self.nat
             nb = self.nb
