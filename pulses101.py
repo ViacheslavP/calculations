@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.insert(0, 'core/')
+sys.path.insert(1, 'core/')
 import one_D_scattering as ods
 from wave_pack import convolution, delay
 from wave_pack import gauss_pulse_v2 as pulse
