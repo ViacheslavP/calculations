@@ -8,7 +8,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 
-CSVPATH = 'data/m_arrays/m_rabiqsn/'
+try:
+    assert(type(sys.argv[1]) is str)
+except AssertionError:
+    print('Something went wrong...')
+except IndexError:
+    print('Using default CSVPATH (NOT FOR SERVER)')
+    CSVPATH = 'data/m_arrays/m_rabiqsn/'
+else:
+    CSVPATH = '/shared/data_m/' + sys.argv[1]
+
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
 
