@@ -4,7 +4,6 @@ import core.one_D_scattering as ods
 from core.wave_pack import convolution, delay
 from core.wave_pack import gauss_pulse_v2 as pulse
 import numpy as np
-from matplotlib import pyplot as plt
 sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 
 try:
