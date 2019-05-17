@@ -61,8 +61,10 @@ class exact_mode(object):
         functions, I am using symbolical evaluation to compute derivative. The alter way is to use
         high order approximation of derivatives (which is not seems reasonable!).
         """
-
-        import sympy as sp
+        try:
+            import sympy as sp
+        except ImportError:
+            import core.sympy as sp
         from scipy.optimize import newton_krylov as krlv
 
         x, _k = sp.symbols('x,_k')  # x stands for propagation const., _k stands for omega
