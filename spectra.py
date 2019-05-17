@@ -14,7 +14,7 @@ except IndexError:
     print('Using default CSVPATH (NOT FOR SERVER)')
     CSVPATH = 'data/m_arrays/m_spectra/'
 else:
-    CSVPATH = '/shared/data_m/' + sys.argv[1]
+    CSVPATH = '/shared/data_m/' + sys.argv[1] + '/'
 
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
@@ -58,7 +58,7 @@ freq = np.linspace(-20,20,980)
 #Pulse duration
 pdTime = 2*np.pi # pulse time, gammma^-1
 
-noa = 20 #Number of atoms
+noa = 1000 #Number of atoms
 
 
 
