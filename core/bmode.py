@@ -64,7 +64,12 @@ class exact_mode(object):
         try:
             import sympy as sp
         except ImportError:
-            import core.sympy.sympy as sp
+            print('No Sympy. Using standart parameters...')
+            self.k = 1.0951842440279334
+            self.vg = 0.7019016375228685
+            self.vp = self._omega / self.k
+            self.sqr_omega = lambda kl: self._omega ** 2 + self.vg * self.vp * (kl ** 2 - self.k ** 2)
+            return 0
         from scipy.optimize import newton_krylov as krlv
 
         x, _k = sp.symbols('x,_k')  # x stands for propagation const., _k stands for omega
@@ -278,15 +283,16 @@ if __name__ == '__main__':
     a = 2*np.pi*200/780
     m = exact_mode(**args)
     m.generate_mode()
+    print(m.k, m.vg)
 
-    from matplotlib import rcParams
-    rcParams.update({'font.size': 18})
-    from matplotlib import pyplot as plt
-    rs = np.linspace(0, 10,100)
-    plt.plot(rs, 1j*(m.E(rs)))
-    plt.plot(rs, -1j*(m.dE(rs)))
-    plt.plot(rs, (m.Ez(rs)))
-    plt.show()
+    #from matplotlib import rcParams
+    #rcParams.update({'font.size': 18})
+    #from matplotlib import pyplot as plt
+    #rs = np.linspace(0, 10,100)
+    #plt.plot(rs, 1j*(m.E(rs)))
+    #plt.plot(rs, -1j*(m.dE(rs)))
+    #plt.plot(rs, (m.Ez(rs)))
+    #plt.show()
     #m.plot_HankelImage()
 """
     from matplotlib import pyplot as plt
