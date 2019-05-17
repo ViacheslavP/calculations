@@ -104,7 +104,7 @@ class ensemble(object):
             self.CrSec = np.zeros(len(deltaP),dtype=np.complex)
             self._foo = [[[]]]
             
-            from bmode import exact_mode
+            from core.bmode import exact_mode
             m = exact_mode(1/lambd, n0, a)
             m.generate_mode()
             self.vg = m.vg*c #group velocity
