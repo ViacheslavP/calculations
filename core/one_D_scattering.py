@@ -586,7 +586,7 @@ class ensemble(object):
             elif self.typ == 'V':
 
                 try:
-                    from sigmaMatrix import returnForV
+                    from core.sigmaMatrix import returnForV
                     self.D = returnForV(Di)
 
                 except:
@@ -923,7 +923,7 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
             self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
-            from wrap_bypass import get_solution
+            from core.wrap_bypass import get_solution
 
             Resolventa = get_solution(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
                          * 2 * np.pi * hbar * kv/self.vg
