@@ -64,7 +64,7 @@ class exact_mode(object):
         try:
             import sympy as sp
         except ImportError:
-            import core.sympy as sp
+            import core.sympy.sympy as sp
         from scipy.optimize import newton_krylov as krlv
 
         x, _k = sp.symbols('x,_k')  # x stands for propagation const., _k stands for omega
