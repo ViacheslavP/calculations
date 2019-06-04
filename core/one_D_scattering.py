@@ -18,13 +18,15 @@ try:
 except ImportError:
     pass
     
-    
+import numpy as np
 from scipy.sparse import linalg as alg
 from scipy.sparse import csc_matrix as csc
+from scipy.sparse import lil_matrix, csr_matrix
 
 
-import numpy as np
+
 from time import time
+import sys
 
    
 def heaviside(x):
@@ -106,7 +108,6 @@ class ensemble(object):
             
             from core.bmode import exact_mode
             m = exact_mode(1/lambd, n0, a)
-            m.generate_mode()
             self.vg = m.vg*c #group velocity
             self.kv = m.k
             self.E = m.E
@@ -538,8 +539,7 @@ class ensemble(object):
 
 
                 dim = nat + 2 * nat * (nat - 1)
-                self.D = np.zeros([dim, dim], dtype=np.complex)
-
+                """
                 possible = False
                 for counterOne in range(dim):
                     for counterTwo in range(dim):
@@ -582,6 +582,60 @@ class ensemble(object):
                         if (n1 == n2a and n2 == n1a) or possible:
                             possible = False
                             self.D[counterOne, counterTwo] = Di[n1, n2, m1, m2]
+                """
+
+                self.D = lil_matrix((dim, dim), dtype=np.complex)
+                for initial in range(dim):
+                    self.D[initial, initial] = 1.
+                    if initial < nat: #If initial state has no raman atoms (i.e. |+++e+++>)
+                        for s in range(nat-1): #s is final excited atom (rel. position)
+
+                            sr = nat + 2*(nat-1)*initial + 2*s
+
+                            ne=s
+                            if s>=initial:
+                                ne+=1 #ne is excited atom position (true)
+
+                            self.D[initial, ne] = Di[initial, ne, 2, 2] # Transition to rayleigh
+                            self.D[initial, sr] = Di[initial, ne, 2, 0] # Transition to Raman with m=0
+                            self.D[initial, sr+1] = Di[initial, ne, 2, 1]
+                            #assert initial != sr
+                            #assert initial != sr+1
+                    elif initial >= nat:
+                        k = (initial - nat) // (2 * (nat-1)) #Raman atom
+                        ni = (initial - nat) % (2 * (nat-1)) // 2 #Excited atom rel pos
+                        gk = (initial - nat) % (2 * (nat-1)) % 2 #Raman state (0 or 1)
+                        assert initial == nat + 2 * (nat - 1) * k + 2 * ni + gk
+
+                        if ni>=k:
+                            ni+=1
+
+                        for s in range(nat-1):
+                            ne=s
+                            if s >= k:
+                                ne += 1
+
+                            #w/ same raman atom
+                            sr = nat + 2 * (nat-1) * k + 2 * s + gk
+                            if sr!=initial:
+                                self.D[initial, sr] = Di[ni, ne, 2, 2]
+
+                        # transfer exc to the Raman atom
+                        if ni < k:
+                            s = k-1
+                        else:
+                            s = k
+
+                        sr = nat + 2*(nat-1)*ni + 2*s
+                        assert initial != sr
+                        assert initial != sr+1
+
+                        self.D[initial, k] = Di[ni, k, gk, 2]  # The only way to transfer back to elastics
+                        self.D[initial, sr] = Di[ni, k, gk, 0]
+                        self.D[initial, sr + 1] = Di[ni, k, gk, 1]
+                        continue
+
+
 
             elif self.typ == 'V':
 
@@ -1040,8 +1094,6 @@ class ensemble(object):
                                                                          self.ez) ** 2) + FIRST * RADIATION_MODES_MODEL / c * abs(
                     self.ez) ** 2 \
                         + SECOND * RADIATION_MODES_MODEL / c * abs(self.ep) ** 2)
-            self.gd_wg = 8 * d00 * d00 * np.pi * k * ((1 / self.vg) * (0*abs(1j*self.em[0] + self.ep[0]) ** 2 / 2 + 0*abs(-1j*self.em[0] + self.ep[0]) ** 2 /2 + \
-                                                                       0*abs(self.ez[0]) ** 2))
             self.gd_full = gd[0]
             """
             ________________________________________________________________
@@ -1092,13 +1144,11 @@ class ensemble(object):
             Tmatrix_reduce = lambda A: np.dot(A, np.conj(A))
             DenMatrix_spur = lambda A, B: np.diag(np.dot(np.transpose(A), np.conj(B)))
 
-            One = np.identity(dim)  # Unit in Lambda-atom with nb neighbours
-            Sigmad =  (np.zeros([dim,dim], dtype=np.complex))
+
 
             # Loop over atoms, from which the photon emits
             for i in range(dim):
                 if i < nat:
-                    Sigmad[i, i] = gd[i] * 0.5j
                     # Initial channel
                     ddRight[i] = +d10 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * self.em[i]
 
@@ -1110,14 +1160,14 @@ class ensemble(object):
                     ddLeftB_pp[i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
 
 
-                    ddLeftF_0m[i, i] = -d01 * np.exp(
+                    ddLeftF_0m[i, i] = +d01 * np.exp(
                             -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
                     ddLeftB_0m[i, i] = -d01 * np.exp(
                             +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
 
-                    ddLeftF_0p[i, i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                    ddLeftF_0p[i, i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
                                           self.ez[i]
-                    ddLeftB_0p[i, i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                    ddLeftB_0p[i, i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
                                           self.ez[i]
 
                     ddLeftF_mm[i, i] = +d01 * np.exp(
@@ -1131,41 +1181,42 @@ class ensemble(object):
                                           (self.em[i])
 
                 elif i >= nat:
-                    na = (i - nat) // (2*nat)
-                    n =  (i - nat) % (2*nat) // 2
-                    m =  (i - nat) % (2*nat) % 2
+                    na = (i - nat) // (2*(nat-1))
+                    n =  (i - nat) % (2*(nat-1)) // 2
+                    m =  (i - nat) % (2*(nat-1)) % 2
+                    assert i == nat + 2*(nat-1)*na + 2*n + m
 
-                    if na >= n:
-                        na += 1
+                    ne = n
+                    if n >= na:
+                        ne += 1
 
-                    Sigmad[i, i] = gd[n] * 0.5j
                     if m==1:
                         # 0, +
-                        ddLeftF_0p[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * \
-                                                  self.ep[n]
-                        ddLeftB_0p[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * \
-                                                  self.ep[n]
+                        ddLeftF_0p[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+                        ddLeftB_0p[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
 
                         # 0, -
                         ddLeftF_0m[i,na] = +d01 * np.exp(
-                            -1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * np.conjugate(self.em[n])
+                            -1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
                         ddLeftB_0m[i,na] = -d01 * np.exp(
-                            +1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * np.conjugate(self.em[n])
+                            +1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
 
 
                     elif m==0:
 
                         # -1, +
-                        ddLeftF_mp[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * \
-                                                  self.ep[n]
-                        ddLeftB_mp[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * \
-                                                  self.ep[n]
+                        ddLeftF_mp[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+                        ddLeftB_mp[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
 
                         # -1, -
                         ddLeftF_mm[i,na] = +d01 * np.exp(
-                            -1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * np.conjugate(self.em[n])
+                            -1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
                         ddLeftB_mm[i,na] = -d01 * np.exp(
-                            +1j * self.kv * self.x0[n, 0] * self.rr[n, 0]) * np.conjugate(self.em[n])
+                            +1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
 
 
 
@@ -1173,9 +1224,9 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
             self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
-            from wrap_bypass import get_solution
+            from wrap_bypass import get_solution_pairs
 
-            Resolventa = get_solution(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
+            Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
                          * 2 * np.pi * hbar * kv/self.vg
 
             TF_pm = np.dot(ddLeftF_pm, Resolventa)
@@ -1413,7 +1464,7 @@ OPPOSITE_SCATTERING = False
 RAMAN_BACKSCATTERING = False
 PAIRS = False
 FIX_RANDOM = True
-RABI = 1#4#4+1e-16 #Rabi frequency
+RABI = 0#4#4+1e-16 #Rabi frequency
 DC = 0 #Rabi detuning
 SHIFT = 0
 RABI_HYP = False
@@ -1441,9 +1492,9 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':10, #number of atoms
+            'nat':30, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
             'l0': 2.00/2, # mean distance between atoms (in lambda_m /2 units)
@@ -1459,12 +1510,16 @@ if __name__ == '__main__':
     SE0 = ensemble(**args)
     SE0.L = 2*np.pi
     SE0.generate_ensemble()
-    plt.plot(freq, abs(SE0.Transmittance)**2)
-    plt.plot(freq, abs(SE0.Reflection) ** 2)
 
-    plt.plot(freq, SE0.fullTransmittance)
-    plt.plot(freq, SE0.fullReflection)
+    PAIRS = True
+    SE1 = ensemble(**args)
+    SE1.L = 2*np.pi
+    SE1.generate_ensemble()
+    plt.plot(freq, SE1.fullTransmittance - SE0.fullTransmittance)
+    plt.plot(freq, SE1.fullReflection - SE0.fullReflection)
     plt.show()
+
+
 
     #print(SE0.gd_wg)
     """

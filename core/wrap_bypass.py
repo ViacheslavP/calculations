@@ -1,10 +1,35 @@
+def get_solution_pairs(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
+    import numpy as np
+    from scipy.sparse import lil_matrix, csr_matrix
+    from scipy.sparse.linalg import lgmres as spsolve
+    import sys
+    scV = np.empty((dim, nof), dtype=np.complex)
+    freq_scaled = (-freq + rabi[0] ** 2 / (4 * (freq - dc)) - 0.5j * gamma)
+    oned = lil_matrix((dim, dim), dtype=np.complex)
+    for i in range(dim):
+        oned[i,i] = 1.
+    Sigma = csr_matrix(Sigma, dtype=np.complex)
+    oned = csr_matrix(oned, dtype=np.complex)
+
+
+    for i,om in enumerate(freq_scaled):
+        resolvent = (om-1.)*oned + Sigma
+        scV[:,i], exitCode = spsolve(resolvent, ddRight)
+        assert exitCode == 0
+        ist = 100 * (i+1) / nof
+        sys.stdout.write("\r%d%%" % ist)
+        sys.stdout.flush()
+        sys.stdout.write("\033[K")
+
+    return scV
+
 def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
 
     import numpy as np
 
 
     try:
-        if dim <= 150:
+        if dim <= 550:
             print("Dimensionality is too small to use CUDA")
             raise ValueError
         import ctypes
@@ -16,7 +41,7 @@ def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
             #TODO: Make this part work!
             raise MemoryError
             resolvent = np.empty((nof, dim,dim), dtype=np.complex)
-            freq_scaled = (freq + rabi[0] ** 2 / (4 * (freq - dc)) - 0.5j * gamma)
+            freq_scaled = (-freq + rabi[0] ** 2 / (4 * (freq - dc)) - 0.5j * gamma)
 
             resolvent = np.broadcast_to(freq_scaled, (nof, dim, dim)) + np.broadcast_to(Sigma, (nof, dim, dim))
             print(np.shape(resolvent))
