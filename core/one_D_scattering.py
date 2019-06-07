@@ -1224,7 +1224,7 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
             self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
-            from wrap_bypass import get_solution_pairs
+            from core.wrap_bypass import get_solution_pairs
 
             Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
                          * 2 * np.pi * hbar * kv/self.vg
