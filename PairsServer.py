@@ -23,6 +23,9 @@ def toMathematica(filename, *argv):
 
 def saveEnsemble(filename, ensemble):
     np.savez(filename,
+             freq=freq,
+             fullTransmittance=ensemble.fullTransmittance,
+             fullReflection=ensemble.fullReflection,
              Transmittance=ensemble.Transmittance,
              Reflection=ensemble.Reflection,
              iTransmittance=ensemble.iTransmittance,
@@ -37,7 +40,7 @@ def saveEnsemble(filename, ensemble):
              TB2_mp=ensemble.TB2_mp)
     pass
 
-freq = np.linspace(-15,15, 980)
+freq = np.linspace(-15,15, 4980)
 ods.PAIRS = True
 args = {
             'nat':10, #number of atoms
@@ -59,7 +62,7 @@ sten = ods.ensemble(**args)
 args['nat'] = 100
 shundred = ods.ensemble(**args)
 
-for filename, ensemble in (('tenR', sten), ('hundredR', shundred)):
+for filename, ensemble in (('tenAT', sten), ('hundredAT', shundred)):
     ensemble.generate_ensemble()
     saveEnsemble(filename, ensemble)
 
@@ -71,5 +74,28 @@ args['nat'] = 100
 shundred = ods.ensemble(**args)
 
 for filename, ensemble in (('ten', sten), ('hundred', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)
+
+ods['s'] = 'nocorrchain'
+ods.RABI = 2.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('tenATnc', sten), ('hundredATnc', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)
+
+ods.RABI = 0.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('tennc', sten), ('hundrednc', shundred)):
     ensemble.generate_ensemble()
     saveEnsemble(filename, ensemble)
