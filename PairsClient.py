@@ -12,7 +12,7 @@ CSVPATH = 'data/m_arrays/wpairs/'
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
 
-SERVERPATH =
+SERVERPATH = '/shared/data_m/mem_spectra/'
 def toMathematica(filename, *argv):
     toCsv = np.column_stack(argv)
     np.savetxt(CSVPATH + filename + '.csv', toCsv, delimiter=',', fmt='%1.8f')

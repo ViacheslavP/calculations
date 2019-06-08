@@ -15,7 +15,14 @@ def get_solution_pairs(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
     for i,om in enumerate(freq_scaled):
         resolvent = (om-1.)*oned + Sigma
         scV[:,i], exitCode = spsolve(resolvent, ddRight)
-        assert exitCode == 0
+        try:
+            assert exitCode == 0
+        except AssertionError:
+            if exitCode > 0:
+                print(f'Convergence not achieved. Step {i}, Number of iterations {exitCode} \n Continue ...')
+            elif exitCode < 0:
+                print('Something bad happened. Exitting...')
+                assert exitCode == 0
         ist = 100 * (i+1) / nof
         sys.stdout.write("\r%d%%" % ist)
         sys.stdout.flush()
