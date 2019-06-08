@@ -1087,6 +1087,10 @@ class ensemble(object):
             c = 1
             dim = nat + 2*nat*(nat-1)
 
+
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
             # Decay rate for Lambda atom with respect of guided modes
             gd = VACUUM_DECAY * 1 + 8 * d00 * d00 * np.pi * k * (
                         (1 / self.vg - RADIATION_MODES_MODEL / c) * (abs(self.em) ** 2 + abs(self.ep) ** 2 + \
