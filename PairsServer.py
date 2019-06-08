@@ -12,7 +12,7 @@ except IndexError:
     print('Using default CSVPATH (NOT FOR SERVER)')
     CSVPATH = 'data/m_arrays/m_/'
 else:
-    CSVPATH = '/shared/data_m/' + sys.argv[1]
+    CSVPATH = '/shared/data_m/' + sys.argv[1] + '/'
 
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
@@ -22,7 +22,7 @@ def toMathematica(filename, *argv):
     np.savetxt(CSVPATH + filename + '.csv', toCsv, delimiter=',', fmt='%1.8f')
 
 def saveEnsemble(filename, ensemble):
-    np.savez(filename,
+    np.savez(CSVPATH + filename,
              freq=freq,
              fullTransmittance=ensemble.fullTransmittance,
              fullReflection=ensemble.fullReflection,
