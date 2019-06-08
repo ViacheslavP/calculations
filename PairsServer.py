@@ -99,3 +99,52 @@ shundred = ods.ensemble(**args)
 for filename, ensemble in (('tennc', sten), ('hundrednc', shundred)):
     ensemble.generate_ensemble()
     saveEnsemble(filename, ensemble)
+
+args['s'] = 'chain'
+ods.OPPOSITE_SCATTERING = True
+
+ods.RABI = 2.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('invtenAT', sten), ('invhundredAT', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)
+
+
+ods.RABI = 0.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('invten', sten), ('invhundred', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)
+
+args['s'] = 'nocorrchain'
+ods.RABI = 2.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('invtenATnc', sten), ('invhundredATnc', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)
+
+ods.RABI = 0.
+ods.DC = -4.
+args['nat'] = 10
+sten = ods.ensemble(**args)
+args['nat'] = 100
+shundred = ods.ensemble(**args)
+
+for filename, ensemble in (('invtennc', sten), ('invhundrednc', shundred)):
+    ensemble.generate_ensemble()
+    saveEnsemble(filename, ensemble)

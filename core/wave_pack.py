@@ -71,6 +71,20 @@ def efficiency(gamma, t, OutPulse):
 
     return simps(SquaredPulse[zero:], t[zero:],even='avg') * gamma
 
+def efficiency_map(sc_freq, sc_amp, times, shifts):
+    effy = np.empty([len(times), len(shifts)],dtype=np.float32)
+    for i in range(len(times)):
+        for j in range(len(shifts)):
+            time = times[i]
+            shift = shifts[j]
+            fourier_t, fourier_amp = convolution(sc_freq, sc_amp, pulse(sc_freq + shift, time), vg=0.7)
+            effy[i,j] = efficiency(time, fourier_t, fourier_amp)
+    return effy
+
+def unitaryTransform(S):
+    U = 1 / np.sqrt(2) * np.asarray([[1., 1.], [1., -1.]])
+    return np.matmul(U, np.matmul(S, np.transpose(U)))
+
 class ideal_spectra:
     def __init__(self, omega, gamma, rabi, rabidt, gamma_parasite=0):
         self.om = omega
