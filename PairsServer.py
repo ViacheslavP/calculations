@@ -77,7 +77,7 @@ for filename, ensemble in (('ten', sten), ('hundred', shundred)):
     ensemble.generate_ensemble()
     saveEnsemble(filename, ensemble)
 
-ods['s'] = 'nocorrchain'
+args['s'] = 'nocorrchain'
 ods.RABI = 2.
 ods.DC = -4.
 args['nat'] = 10
