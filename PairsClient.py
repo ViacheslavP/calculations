@@ -6,14 +6,12 @@ from core.wave_pack import gauss_pulse_v2 as pulse
 from core.wave_pack import efficiency_map, unitaryTransform
 import numpy as np
 import paramiko
-sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
+sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=0)
 
 
 CSVPATH = 'data/m_arrays/wpairs/'
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
-
-SERVERPATH = '/shared/data_m/mem_spectra/'
 def toMathematica(filename, *argv):
     toCsv = np.column_stack(argv)
     np.savetxt(CSVPATH + filename + '.csv', toCsv, delimiter=',', fmt='%1.8f')
@@ -34,7 +32,6 @@ def download_files(fnames):
         sftp.get(SERVERPATH+fname, CSVPATH+fname)
     client.close()
 
-sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 
 
 
@@ -42,12 +39,11 @@ sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 filenames = []
 for num in ('ten', 'hundred'):
     for rt in ('', 'AT'):
-        for cor in ('', 'nc'):
-            filenames.append(num+rt+cor)
+        filenames.append(num+rt+'.npz')
 fullfilenames = filenames + ['inv'+x for x in filenames]
 
 
-download_files(fullfilenames)
+#download_files(fullfilenames)
 atfnames = list(filter(lambda x: 'AT' in x, filenames))
 
 
@@ -85,6 +81,7 @@ for filename in atfnames:
 
     opt_conv = lambda x: convolution(freq, x, pulse(freq + shift, gamma))
 
+    time, fr = opt_conv(np.ones_like(ensemble.f.Transmittance))
     #Forward Intensity
 
     _, ft = opt_conv(ensemble.f.Transmittance)

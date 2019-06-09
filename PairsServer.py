@@ -40,7 +40,7 @@ def saveEnsemble(filename, ensemble):
              TB2_mp=ensemble.TB2_mp)
     pass
 
-freq = np.linspace(-15,15, 4980)
+freq = np.linspace(-55,55, 4980)
 ods.PAIRS = True
 args = {
             'nat':10, #number of atoms

@@ -77,7 +77,7 @@ def efficiency_map(sc_freq, sc_amp, times, shifts):
         for j in range(len(shifts)):
             time = times[i]
             shift = shifts[j]
-            fourier_t, fourier_amp = convolution(sc_freq, sc_amp, pulse(sc_freq + shift, time), vg=0.7)
+            fourier_t, fourier_amp = convolution(sc_freq, sc_amp, inverse_pulse(sc_freq + shift, time), vg=0.7)
             effy[i,j] = efficiency(time, fourier_t, fourier_amp)
     return effy
 
