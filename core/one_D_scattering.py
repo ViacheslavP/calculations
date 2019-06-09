@@ -635,8 +635,6 @@ class ensemble(object):
                         self.D[initial, sr + 1] = Di[ni, k, gk, 1]
                         continue
 
-
-
             elif self.typ == 'V':
 
                 try:
@@ -1496,9 +1494,9 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':30, #number of atoms
+            'nat':100, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
             'l0': 2.00/2, # mean distance between atoms (in lambda_m /2 units)

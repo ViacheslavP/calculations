@@ -3,7 +3,7 @@ import os
 import core.one_D_scattering as ods
 from core.wave_pack import convolution, delay
 from core.wave_pack import gauss_pulse_v2 as pulse
-from core.wave_pack import efficiency_map
+from core.wave_pack import efficiency_map, unitaryTransform
 import numpy as np
 import paramiko
 sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
@@ -34,6 +34,7 @@ def download_files(fnames):
         sftp.get(SERVERPATH+fname, CSVPATH+fname)
     client.close()
 
+sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=1)
 
 
 
@@ -48,22 +49,90 @@ fullfilenames = filenames + ['inv'+x for x in filenames]
 
 download_files(fullfilenames)
 atfnames = list(filter(lambda x: 'AT' in x, filenames))
+
+
+#Optimization parameters
+nshifts = 100
+ntimes = 200
+
+pdGammas = np.linspace(0.02, 1, ntimes)
+pdShifts = np.linspace(3, 5, nshifts)
+
+
 for filename in atfnames:
     ensemble = np.load(CSVPATH+filename)
-    #Find optimal
+    ensemble_inv = np.load(CSVPATH+filename)
+    if 'ten' in filename:
+        nat = 10
+    elif 'hundred' in filename:
+        nat = 100
+    else:
+        raise ValueError
+
+
     freq = ensemble.f.freq
 
 
+    # Find optimal
     Smatrix = np.moveaxis( np.asarray([[ensemble.f.Transmittance, ensemble.f.Reflection],
-                            [ensemble.f.Reflection, ensemble.f.Transmittance]]), -1,0)
-    TS_chain = efficiency_map(freq, uSu_chain[:, 0, 0], pdGammas, pdShifts)
-    maxTS = np.unravel_index(effyTS_chain.argmax(), effyTS_chain.shape)
+                            [ensemble_inv.f.Reflection, ensemble_inv.f.Transmittance]]), -1,0)
+    Sunit = unitaryTransform(Smatrix)
+
+
+    TS = efficiency_map(freq, Sunit[:, 0, 0], pdGammas, pdShifts)
+    maxTS = np.unravel_index(TS.argmax(), TS.shape)
     gamma = pdGammas[maxTS[0]]; shift = pdShifts[maxTS[1]]
-    #Transmittance
-    freq = ensemble.freq
-    _, ft = convolution(freq, ensemble.f.Transmittance, pulse(freq + SHIFT, pdTime))
+
+    opt_conv = lambda x: convolution(freq, x, pulse(freq + shift, gamma))
+
+    #Forward Intensity
+
+    _, ft = opt_conv(ensemble.f.Transmittance)
+    _, ft_i = opt_conv(ensemble.f.iTransmittance)
+
+    tf0m = np.empty((nat, len(ft)), dtype=np.complex)
+    tf0p = np.empty((nat, len(ft)), dtype=np.complex)
+    tfmm = np.empty((nat, len(ft)), dtype=np.complex)
+    tfmp = np.empty((nat, len(ft)), dtype=np.complex)
+
+
+    for i in range(nat):
+        _, tf0m[i, :] = opt_conv(1j*ensemble.f.TF2_0m[i,:])
+        _, tf0p[i, :] = opt_conv(1j*ensemble.f.TF2_0p[i,:])
+        _, tfmm[i, :] = opt_conv(1j*ensemble.f.TF2_mm[i,:])
+        _, tfmp[i, :] = opt_conv(1j*ensemble.f.TF2_mp[i,:])
+
+    Forward = abs(ft)**2 \
+            + abs(ft_i)**2 \
+            + sq_reduce(tf0m) \
+            + sq_reduce(tf0p) \
+            + sq_reduce(tfmm) \
+            + sq_reduce(tfmp)
+
+    # Backward Intensity
+
+    _, fr = opt_conv(ensemble.f.Reflection)
+    _, fr_i = opt_conv(ensemble.f.iReflection)
+
+    tb0m = np.empty((nat, len(ft)), dtype=np.complex)
+    tb0p = np.empty((nat, len(ft)), dtype=np.complex)
+    tbmm = np.empty((nat, len(ft)), dtype=np.complex)
+    tbmp = np.empty((nat, len(ft)), dtype=np.complex)
+
+    for i in range(nat):
+        _, tb0m[i, :] = opt_conv(-1j*ensemble.f.TB2_0m[i, :])
+        _, tb0p[i, :] = opt_conv(-1j*ensemble.f.TB2_0p[i, :])
+        _, tbmm[i, :] = opt_conv(-1j*ensemble.f.TB2_mm[i, :])
+        _, tbmp[i, :] = opt_conv(-1j*ensemble.f.TB2_mp[i, :])
+
+    Backward = abs(fr) ** 2 \
+              + abs(fr_i) ** 2 \
+              + sq_reduce(tb0m) \
+              + sq_reduce(tb0p) \
+              + sq_reduce(tbmm) \
+              + sq_reduce(tbmp)
+
+    SingleEntry = Forward + Backward
 
 
 
-    _, fr = convolution(freq, elasticSc.Reflection, pulse(freq + SHIFT, pdTime))
-    ti, fi = convolution(freq, np.ones_like(freq), pulse(freq + SHIFT, pdTime))
