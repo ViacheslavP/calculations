@@ -36,7 +36,7 @@ def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
 
 
     try:
-        if dim <= 550:
+        if dim <= 1550:
             print("Dimensionality is too small to use CUDA")
             raise ValueError
         import ctypes

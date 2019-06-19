@@ -10,7 +10,7 @@ except AssertionError:
     print('Something went wrong...')
 except IndexError:
     print('Using default CSVPATH (NOT FOR SERVER)')
-    CSVPATH = 'data/m_arrays/m_/'
+    CSVPATH = 'data/m_arrays/wpairs_nocorr/'
 else:
     CSVPATH = '/shared/data_m/' + sys.argv[1] + '/'
 
@@ -40,12 +40,15 @@ def saveEnsemble(filename, ensemble):
              TB2_mp=ensemble.TB2_mp)
     pass
 
-freq = np.linspace(-55,55, 4980)
-ods.PAIRS = True
+ods.FIX_RANDOM = True
+ods.SEED = 12
+raz = 8000
+freq = np.linspace(-25.5,25.5, raz)
+ods.PAIRS = False
 args = {
             'nat':10, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
             'l0': 2.00/2, # mean distance between atoms (in lambda_m /2 units)
@@ -78,7 +81,6 @@ for filename, ensemble in (('ten', sten), ('hundred', shundred)):
     saveEnsemble(filename, ensemble)
 
 
-args['s'] = 'chain'
 ods.OPPOSITE_SCATTERING = True
 
 ods.RABI = 2.

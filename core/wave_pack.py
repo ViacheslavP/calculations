@@ -71,6 +71,14 @@ def efficiency(gamma, t, OutPulse):
 
     return simps(SquaredPulse[zero:], t[zero:],even='avg') * gamma
 
+def efficiency_sq(gamma, t, SquaredPulse):
+    zero = np.argmin(t**2)
+
+    return simps(SquaredPulse[zero:], t[zero:],even='avg') * gamma
+
+def norm_gauss(gamma, t, SquaredPulse):
+    return simps(SquaredPulse, t,even='avg') * gamma
+
 def efficiency_map(sc_freq, sc_amp, times, shifts):
     effy = np.empty([len(times), len(shifts)],dtype=np.float32)
     for i in range(len(times)):
