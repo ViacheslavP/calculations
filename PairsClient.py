@@ -9,7 +9,7 @@ import paramiko
 sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=0)
 
 
-CSVPATH = 'data/m_arrays/wpairs_nocorr/'
+CSVPATH = 'data/m_arrays/wpairs/'
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
 def toMathematica(filename, *argv):
@@ -142,7 +142,7 @@ for filename in atfnames:
     SingleEntry = Forward + Backward
     SingleEntryElastic = abs(ft)**2 + abs(fr)**2
 
-    #Sagnac intensity
+    #Sagnac intensity: Left port
     sz = ensemble.f.Transmittance + ensemble_inv.f.Reflection
     sz_i = ensemble.f.iTransmittance + ensemble_inv.f.iReflection
     sz_mm = -1j*(ensemble.f.TF2_mm - ensemble_inv.f.TB2_mm)
@@ -150,7 +150,15 @@ for filename in atfnames:
     sz_0m = -1j*(ensemble.f.TF2_0m - ensemble_inv.f.TB2_0m)
     sz_0p = -1j*(ensemble.f.TF2_0p - ensemble_inv.f.TB2_0p)
 
-
+    #Sagnac intensity: Right port
+    
+    sz = ensemble.f.Transmittance - ensemble_inv.f.Reflection
+    sz_i = ensemble.f.iTransmittance - ensemble_inv.f.iReflection
+    sz_mm = -1j*(ensemble.f.TF2_mm + ensemble_inv.f.TB2_mm)
+    sz_mp = -1j*(ensemble.f.TF2_mp + ensemble_inv.f.TB2_mp)
+    sz_0m = -1j*(ensemble.f.TF2_0m + ensemble_inv.f.TB2_0m)
+    sz_0p = -1j*(ensemble.f.TF2_0p + ensemble_inv.f.TB2_0p)
+    
     _, fs = opt_conv(sz)
     _, fs_i = opt_conv(sz_i)
 
@@ -174,8 +182,8 @@ for filename in atfnames:
 
     SagnacElastic = abs(fs)**2
 
-    print('Elastic eff:', efficiency_sq(gamma, time, Sagnac))
-    print('Inelastic eff:', efficiency_sq(gamma, time, SagnacElastic))
+    
+    
 
     toMathematica(filename+'pulses', time,
                                     abs(fi)**2,
@@ -183,8 +191,11 @@ for filename in atfnames:
                                     SingleEntryElastic,
                                     Sagnac,
                                     SagnacElastic)
+                                    
+            
 """
-"""
+
+
 for filename in filenames:
 
     ensemble = np.load(CSVPATH+filename)
@@ -204,9 +215,15 @@ for filename in filenames:
     fRram = ensemble.f.fullReflection - abs(ensemble.f.Reflection)**2
     fTram = ensemble.f.fullTransmittance - abs(ensemble.f.Transmittance)**2
 
-    sz = ensemble.f.Transmittance + ensemble_inv.f.Reflection
-    sz_i = ensemble.f.iTransmittance + ensemble_inv.f.iReflection
-    sz_mm = -1j*(ensemble.f.TF2_mm - ensemble_inv.f.TB2_mm)
+    sz = (ensemble.f.Transmittance + ensemble_inv.f.Transmittance +
+          ensemble.f.Reflection + ensemble_inv.f.Reflection)/2
+
+    sz_i = (ensemble.f.iTransmittance + ensemble_inv.f.iTransmittance +
+          ensemble.f.iReflection + ensemble_inv.f.iReflection)/2
+
+    sz_mm = -1j*(ensemble.f.TF2_mm + ensemble_inv.f.TF2_mm -
+                 ensemble.f.TB2_mm - ensemble_inv.f.TB2_mm)
+
     sz_mp = -1j*(ensemble.f.TF2_mp - ensemble_inv.f.TB2_mp)
     sz_0m = -1j*(ensemble.f.TF2_0m - ensemble_inv.f.TB2_0m)
     sz_0p = -1j*(ensemble.f.TF2_0p + ensemble_inv.f.TB2_0p)
@@ -232,6 +249,7 @@ for filename in filenames:
                  sq_reduce(sz_mp) + \
                  sq_reduce(sz_0m) + \
                  sq_reduce(sz_0p)
+
     SagnacRam = fullSagnac - SagnacSp
 
     pSagnacSp = abs(psz)**2
@@ -240,7 +258,13 @@ for filename in filenames:
                  sq_reduce(psz_mp) + \
                  sq_reduce(psz_0m) + \
                  sq_reduce(psz_0p)
+
     pSagnacRam = pfullSagnac - pSagnacSp
 
-    toMathematica(filename+'spectra', freq, fR, fT, fRram, fTram, fullSagnac, SagnacRam, pfullSagnac, pSagnacRam)
-"""
+    from matplotlib import pyplot as plt
+
+    plt.plot(freq, fullSagnac)
+    plt.plot(freq, pfullSagnac)
+    plt.show()
+
+    #toMathematica(filename+'spectra', freq, fR, fT, fRram, fTram, fullSagnac, SagnacRam, pfullSagnac, pSagnacRam)

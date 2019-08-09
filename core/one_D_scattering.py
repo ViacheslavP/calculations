@@ -374,7 +374,7 @@ class ensemble(object):
                 for j in range(nat):
     
                     Dz[i,j] =   \
-                            -1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
+                            +1*2j*np.pi*kv*np.exp(1j*self.kv*(abs(self.x0[i,j]))* \
                     self.rr[i,j])*(1/self.vg)
                     DzSub[i,j] = -1*2j*np.pi*kv*np.exp(1j*self.kv_sub*(abs(self.x0[i,j]))* \
                     self.rr[i,j])*(RADIATION_MODES_MODEL*neigh[i,j] / self.kv_sub)
@@ -413,15 +413,15 @@ class ensemble(object):
                     #Full modes - exact solutions
 
                     emfi  =              np.array([self.em[i], self.ez[i], self.ep[i]], dtype=np.complex)
-                    emfjc = np.conjugate(np.array([self.em[j], self.ez[j], self.ep[j]], dtype=np.complex))
+                    emfjc = np.conjugate(np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=np.complex))
 
-                    epfi  = np.conjugate(np.array([self.ep[i], self.ez[i], self.em[i]], dtype=np.complex))
+                    epfi  = np.conjugate(np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=np.complex))
                     epfjc =              np.array([self.ep[j], self.ez[j], self.em[j]], dtype=np.complex)
 
                     embi  =              np.array([-self.em[i], self.ez[i], -self.ep[i]], dtype=np.complex)
-                    embjc = np.conjugate(np.array([-self.em[j], self.ez[j], -self.ep[j]], dtype=np.complex))
+                    embjc = np.conjugate(np.array([self.em[j], self.ez[j], self.ep[j]], dtype=np.complex))
 
-                    epbi  = np.conjugate(np.array([-self.ep[i], self.ez[i], -self.em[i]], dtype=np.complex))
+                    epbi  = np.conjugate(np.array([self.ep[i], self.ez[i], self.em[i]], dtype=np.complex))
                     epbjc =              np.array([-self.ep[j], self.ez[j], -self.em[j]], dtype=np.complex)
 
                     """
@@ -442,10 +442,10 @@ class ensemble(object):
                     """
                     #Perp mode - projected onto polarization vectors
 
-                    emfjcSub = np.conjugate(np.array([self.em[j], 0, 0], dtype=np.complex))
+                    emfjcSub = np.conjugate(np.array([-self.em[j], 0, 0], dtype=np.complex))
                     epfjcSub = np.array([0, 0, self.em[j]], dtype=np.complex)
 
-                    embjcSub = np.conjugate(np.array([-self.em[j], 0, 0], dtype=np.complex))
+                    embjcSub = np.conjugate(np.array([self.em[j], 0, 0], dtype=np.complex))
                     epbjcSub = np.array([0, 0, -self.em[j]], dtype=np.complex)
 
 
@@ -597,8 +597,8 @@ class ensemble(object):
                                 ne+=1 #ne is excited atom position (true)
 
                             self.D[initial, ne] = Di[initial, ne, 2, 2] # Transition to rayleigh
-                            self.D[initial, sr] = Di[initial, ne, 2, 0] # Transition to Raman with m=0
-                            self.D[initial, sr+1] = Di[initial, ne, 2, 1]
+                            self.D[initial, sr] = Di[initial, ne, 2, 1] # Transition to Raman with m=0
+                            self.D[initial, sr+1] = Di[initial, ne, 2, 0]
                             #assert initial != sr
                             #assert initial != sr+1
                     elif initial >= nat:
@@ -875,8 +875,8 @@ class ensemble(object):
                 ddLeftF_pm[(i+1)*3**nb-1] = +d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[0,i])*np.conjugate(self.em[i])
                 ddLeftB_pm[(i+1)*3**nb-1] = -d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[0,i])*np.conjugate(self.em[i])
                 # Faraday
-                ddLeftF_pp[(i+1)*3**nb-1] = +d01*np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * (self.ep[i])
-                ddLeftB_pp[(i+1)*3**nb-1] = -d01*np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * (self.ep[i])
+                ddLeftF_pp[(i+1)*3**nb-1] = -d01*np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * (self.ep[i])
+                ddLeftB_pp[(i+1)*3**nb-1] = +d01*np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * (self.ep[i])
 
                 if SINGLE_RAMAN:
                     """
@@ -909,20 +909,20 @@ class ensemble(object):
                             index_0 = (i+1)*3**nb-1 # combination number of neighbours state (all two's)
                             index_m = (i+1)*3**nb-1 #
 
-                            ddLeftF_0m[index_0, jp] = -d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ez[i])
-                            ddLeftB_0m[index_0, jp] = -d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ez[i])
+                            ddLeftF_0m[index_0, jp] = +d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ez[i])
+                            ddLeftB_0m[index_0, jp] = +d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ez[i])
 
-                            ddLeftF_0p[index_0, jp] = -d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
+                            ddLeftF_0p[index_0, jp] = +d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
                                                      self.ez[i]
-                            ddLeftB_0p[index_0, jp] = -d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
+                            ddLeftB_0p[index_0, jp] = +d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
                                                      self.ez[i]
 
                             ddLeftF_mm[index_m, jp] = +d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ep[i])
                             ddLeftB_mm[index_m, jp] = -d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * np.conjugate(self.ep[i])
 
-                            ddLeftF_mp[index_m, jp] = +d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
+                            ddLeftF_mp[index_m, jp] = -d01 * np.exp(-1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
                                                      (self.em[i])
-                            ddLeftB_mp[index_m, jp] = -d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
+                            ddLeftB_mp[index_m, jp] = +d01 * np.exp(+1j * self.kv * self.x0[i,0] * self.rr[0, i]) * \
                                                      (self.em[i])
 
                             continue
@@ -938,14 +938,14 @@ class ensemble(object):
                         ddLeftF_0m[index_0,jp] = +d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*np.conjugate(self.em[i])
                         ddLeftB_0m[index_0,jp] = -d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*np.conjugate(self.em[i])
                     
-                        ddLeftF_0p[index_0,jp] = +d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
-                        ddLeftB_0p[index_0,jp] = -d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
+                        ddLeftF_0p[index_0,jp] = -d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
+                        ddLeftB_0p[index_0,jp] = +d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
                     
                         ddLeftF_mm[index_m,jp] = +d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*np.conjugate(self.em[i])
                         ddLeftB_mm[index_m,jp] = -d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*np.conjugate(self.em[i])
                     
-                        ddLeftF_mp[index_m,jp] = +d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
-                        ddLeftB_mp[index_m,jp] = -d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
+                        ddLeftF_mp[index_m,jp] = -d01*np.exp(-1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
+                        ddLeftB_mp[index_m,jp] = +d01*np.exp(+1j*self.kv*self.x0[i,0]*self.rr[i,0])*self.ep[i]
 
                         counter += 1
                         """
@@ -1158,13 +1158,13 @@ class ensemble(object):
                     ddLeftF_pm[i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
                     ddLeftB_pm[i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
                     # inelastic Rayleigh
-                    ddLeftF_pp[i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
-                    ddLeftB_pp[i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
+                    ddLeftF_pp[i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
+                    ddLeftB_pp[i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
 
 
                     ddLeftF_0m[i, i] = +d01 * np.exp(
                             -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
-                    ddLeftB_0m[i, i] = -d01 * np.exp(
+                    ddLeftB_0m[i, i] = +d01 * np.exp(
                             +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
 
                     ddLeftF_0p[i, i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
@@ -1177,9 +1177,9 @@ class ensemble(object):
                     ddLeftB_mm[i, i] = -d01 * np.exp(
                             +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ep[i])
 
-                    ddLeftF_mp[i, i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                    ddLeftF_mp[i, i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
                                           (self.em[i])
-                    ddLeftB_mp[i, i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                    ddLeftB_mp[i, i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
                                           (self.em[i])
 
                 elif i >= nat:
@@ -1194,9 +1194,9 @@ class ensemble(object):
 
                     if m==1:
                         # 0, +
-                        ddLeftF_0p[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                        ddLeftF_0p[i,na] = -d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
                                                   self.ep[ne]
-                        ddLeftB_0p[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                        ddLeftB_0p[i,na] = +d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
                                                   self.ep[ne]
 
                         # 0, -
@@ -1209,9 +1209,9 @@ class ensemble(object):
                     elif m==0:
 
                         # -1, +
-                        ddLeftF_mp[i,na] = +d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                        ddLeftF_mp[i,na] = -d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
                                                   self.ep[ne]
-                        ddLeftB_mp[i,na] = -d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                        ddLeftB_mp[i,na] = +d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
                                                   self.ep[ne]
 
                         # -1, -
@@ -1295,8 +1295,11 @@ class ensemble(object):
 
             self.SideScattering = 1 - self.fullTransmittance - self.fullReflection
 
-
             self.dm = dm
+
+
+
+
             self.TF2_0m = TF2_0m
             self.TB2_0m = TB2_0m
 
@@ -1308,6 +1311,22 @@ class ensemble(object):
 
             self.TF2_mp = TF2_mp
             self.TB2_mp = TB2_mp
+
+            #S-matrix output
+
+            mkv = np.sign(self.kv)
+
+            self.SF2_0m = mkv*1j*TF2_0m
+            self.SB2_0m = mkv*1j*TB2_0m
+
+            self.SF2_0p = mkv*1j*TF2_0p
+            self.SB2_0p = mkv*1j*TB2_0p
+
+            self.SF2_mm = 1j*TF2_mm
+            self.SB2_mm = 1j*TB2_mm
+
+            self.SF2_mp = 1j*TF2_mp
+            self.SB2_mp = 1j*TB2_mp
 
             print('\n')
 
@@ -1457,16 +1476,16 @@ freq = np.linspace(-15,15, 980)*gd
 
 #Validation (all = 1 iff ful theory, except SINGLE_RAMAN)
 
-RADIATION_MODES_MODEL = 1 # = 1 iff assuming our model of radiation modes =0 else
+RADIATION_MODES_MODEL = 0 # = 1 iff assuming our model of radiation modes =0 else
 DDI = 1
-VACUUM_DECAY = 1# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+VACUUM_DECAY = 0# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
 SINGLE_RAMAN = True
 OPPOSITE_SCATTERING = False
 RAMAN_BACKSCATTERING = False
-PAIRS = False
+PAIRS = True
 FIX_RANDOM = True
-RABI = 0#4#4+1e-16 #Rabi frequency
+RABI = 1e-16#4#4+1e-16 #Rabi frequency
 DC = 0 #Rabi detuning
 SHIFT = 0
 RABI_HYP = False
@@ -1494,12 +1513,12 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':100, #number of atoms
+            'nat':2, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'nocorrchain', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
-            'l0': 2.00/2, # mean distance between atoms (in lambda_m /2 units)
+            'l0': 2./2, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq
             'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3 #filling factor (for ff_chain only)
@@ -1517,8 +1536,9 @@ if __name__ == '__main__':
     SE1 = ensemble(**args)
     SE1.L = 2*np.pi
     SE1.generate_ensemble()
-    plt.plot(freq, SE1.fullTransmittance - SE0.fullTransmittance)
-    plt.plot(freq, SE1.fullReflection - SE0.fullReflection)
+
+    plt.plot(freq, SE1.SideScattering)
+    plt.plot(freq, SE0.SideScattering)
     plt.show()
 
 
