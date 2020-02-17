@@ -10,7 +10,7 @@ except AssertionError:
     print('Something went wrong...')
 except IndexError:
     print('Using default CSVPATH (NOT FOR SERVER)')
-    CSVPATH = 'data/m_arrays/wpairs_nocorr/'
+    CSVPATH = 'data/m_arrays/nocorr_09.08.2019/'
 else:
     CSVPATH = '/shared/data_m/' + sys.argv[1] + '/'
 
@@ -26,18 +26,18 @@ def saveEnsemble(filename, ensemble):
              freq=freq,
              fullTransmittance=ensemble.fullTransmittance,
              fullReflection=ensemble.fullReflection,
-             Transmittance=ensemble.Transmittance,
-             Reflection=ensemble.Reflection,
-             iTransmittance=ensemble.iTransmittance,
-             iReflection=ensemble.iReflection,
-             TF2_0m=ensemble.TF2_0m,
-             TB2_0m=ensemble.TB2_0m,
-             TF2_0p=ensemble.TF2_0p,
-             TB2_0p=ensemble.TB2_0p,
-             TF2_mm=ensemble.TF2_mm,
-             TB2_mm=ensemble.TB2_mm,
-             TF2_mp=ensemble.TF2_mp,
-             TB2_mp=ensemble.TB2_mp)
+             SF1_pm=ensemble.SF1_pm,
+             SB1_pm=ensemble.SB1_pm,
+             SF1_pp=ensemble.SF1_pp,
+             SB1_pp=ensemble.SB1_pp,
+             SF2_0m=ensemble.SF2_0m,
+             SB2_0m=ensemble.SB2_0m,
+             SF2_0p=ensemble.SF2_0p,
+             SB2_0p=ensemble.SB2_0p,
+             SF2_mm=ensemble.SF2_mm,
+             SB2_mm=ensemble.SB2_mm,
+             SF2_mp=ensemble.SF2_mp,
+             SB2_mp=ensemble.SB2_mp)
     pass
 
 ods.FIX_RANDOM = True
@@ -45,6 +45,9 @@ ods.SEED = 12
 raz = 8000
 freq = np.linspace(-25.5,25.5, raz)
 ods.PAIRS = False
+ods.RABI = 2.
+ods.DC = -4.
+
 args = {
             'nat':10, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
@@ -58,8 +61,8 @@ args = {
         }
 
 
-ods.RABI = 2.
-ods.DC = -4.
+ods.OPPOSITE_SCATTERING = False
+
 args['nat'] = 10
 sten = ods.ensemble(**args)
 args['nat'] = 100

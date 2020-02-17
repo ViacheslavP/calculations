@@ -1,4 +1,4 @@
-def get_solution_pairs(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
+def get_solution_pairs(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc, edge=False):
     import numpy as np
     from scipy.sparse import lil_matrix, csr_matrix
     from scipy.sparse.linalg import lgmres as spsolve
@@ -6,14 +6,36 @@ def get_solution_pairs(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
     scV = np.empty((dim, nof), dtype=np.complex)
     freq_scaled = (-freq + rabi[0] ** 2 / (4 * (freq - dc)) - 0.5j * gamma)
     oned = lil_matrix((dim, dim), dtype=np.complex)
+    gammakiller = lil_matrix((dim, dim), dtype=np.complex)
     for i in range(dim):
         oned[i,i] = 1.
+
+
+    if edge:
+        print('Seems option EDGE_DECAY is on')
+        def _onethird(ki):
+            if ki > noa//3 and ki < noa - noa//3:
+                return 0.
+            else:
+                return 1.
+
+
+        for i in range(dim):
+            if i < noa:
+                gammakiller[i,i] = _onethird(i)
+
+            else:
+                ni = (i - noa) % (2 * (noa-1)) // 2
+                gammakiller[i,i] = _onethird(ni)
+
+        gammakiller = csr_matrix(gammakiller, dtype=np.complex)
+
     Sigma = csr_matrix(Sigma, dtype=np.complex)
     oned = csr_matrix(oned, dtype=np.complex)
 
 
     for i,om in enumerate(freq_scaled):
-        resolvent = (om-1.)*oned + Sigma
+        resolvent = (om-0*1.)*oned + Sigma + gammakiller*(0.5j * gamma)
         scV[:,i], exitCode = spsolve(resolvent, ddRight)
         try:
             assert exitCode == 0

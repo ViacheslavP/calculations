@@ -605,7 +605,8 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.freqs), dtype=float)
 
             from wrap_bypass import get_solution
-            #self.D = -self.D
+            #
+            #self.D = 0*self.D
             Resolventa = get_solution(dim, len(self.freqs), nat, self.D, ddRight, self.freqs, gd[0], RABI * np.ones(dim, dtype=np.float32), DC) \
                          * 2 * np.pi * hbar * kv/c
 
@@ -842,7 +843,7 @@ OPPOSITE_SCATTERING = False
 RAMAN_BACKSCATTERING = False
 PAIRS = False
 FIX_RANDOM = True
-RABI = 2#4#4+1e-16 #Rabi frequency
+RABI = 0#4#4+1e-16 #Rabi frequency
 DC = -4 #Rabi detuning
 SHIFT = 0
 RABI_HYP = False
@@ -870,12 +871,12 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':16, #number of atoms
+            'nat':100, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
-            's':'square', #Stands for atom positioning : chain, nocorrchain and doublechain
+            's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 0, # distance from center
-            'l0': 2.00/2, # mean distance between atoms (in lambda_m /2 units)
+            'l0': 200.00/2, # mean distance between atoms (in lambda_m /2 units)
             'freqs':freq,  # array of freq
             'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3 #filling factor (for ff_chain only)
@@ -885,11 +886,12 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     PAIRS = False
-    WAIST = 4.
+    WAIST = 40.
     SE8 = ensemble(**args)
     SE8.generate_ensemble()
 
-    WAIST = 8.
+    WAIST = 40.
+    args['nat'] = 1
     SE16 = ensemble(**args)
     SE16.generate_ensemble()
 
@@ -900,13 +902,12 @@ if __name__ == '__main__':
 
     #plt.show()
 
-    plt.plot(freq, abs(SE8.Transmittance-SE8.Reflection)**2)
-    plt.plot(freq, abs(SE8.Reflection+SE8.Transmittance) ** 2)
-    plt.plot(freq, 1-abs(SE8.Transmittance-SE8.Reflection)**2-abs(SE8.Reflection+SE8.Transmittance) ** 2)
+    plt.plot(freq, (1 - abs(SE8.Transmittance)**2) / (1-abs(SE8.Transmittance[990])**2) )
+    #plt.plot(freq, abs(SE8.Reflection) ** 2)
 
-    plt.plot(freq, abs(SE16.Transmittance)**2)
-    plt.plot(freq, abs(SE16.Reflection) ** 2)
-    plt.plot(freq, 1-abs(SE16.Transmittance)**2-abs(SE16.Reflection)**2)
+    plt.plot(freq, (1-abs(SE16.Transmittance)**2) / (1-abs(SE16.Transmittance[990])**2), 'g--')
+    #plt.plot(freq, abs(SE16.Reflection) ** 2, 'r--')
+
 
     plt.show()
 

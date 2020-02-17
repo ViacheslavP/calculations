@@ -85,9 +85,11 @@ class ensemble(object):
                      deltaP=np.asarray([0.]),
                      typ='L',
                      dens=0.1,
-                     ff = 0.1
+                     ff = 0.1,
+                     numexc = 0,
                      ):
-                         
+
+            self.numexc = numexc
             self.rr = np.array([[]])
             self.ep = np.array([],dtype=np.complex)
             self.em = np.array([],dtype=np.complex)
@@ -168,7 +170,68 @@ class ensemble(object):
                 y = 0.*np.ones(nat)
                 goo = [i for i in range(nat//2)]
                 z = np.asarray(goo+goo)*step
-            
+
+            elif s=='big-resonator':
+                x = self.d*a*np.ones(nat)
+                y = 0.*np.ones(nat)
+                n1 = 4 * (nat // 9)
+                n2 = nat - n1
+
+                z = np.arange(nat)
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1 and i < n2:
+                        z[i] += 0.5*LMDA
+
+                    elif i >=n2:
+                        z[i] += 1*LMDA
+
+                z = step*z
+
+            elif s=='resonator':
+                x = self.d*a*np.ones(nat)
+                y = 0.*np.ones(nat)
+                n1 = nat // 3
+                n2 = nat - n1
+
+
+                z = np.arange(nat)
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1 and i < n2:
+                        z[i] += 0.5*LMDA
+
+                    elif i >=n2:
+                        z[i] += 1*LMDA
+
+                z = step*z
+
+
+            elif s=='side-mirror':
+                x = self.d*a*np.ones(nat)
+                y = 0.*np.ones(nat)
+                z = np.arange(nat)
+                n1 = nat//2
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1:
+                        z[i] += 0.5 * LMDA
+                z = step*z
+
+            elif s=='big-side-mirror':
+                x = self.d*a*np.ones(nat)
+                y = 0.*np.ones(nat)
+                z = np.arange(nat)
+                n1 = nat//9
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1:
+                        z[i] += 0.5
+                z = step*z
             
             elif s=='ff_chain':
                 if self.ff>0.99:
@@ -504,7 +567,7 @@ class ensemble(object):
                                             self.xm[i,j]*self.xp[i,j]*D2[i,j])
 
 
-            if self.typ == 'L' and not PAIRS:
+            if (self.typ == 'L' or self.typ == 'LM') and not PAIRS:
                 try:
 
 
@@ -535,7 +598,7 @@ class ensemble(object):
                                         self.D[n1*3**nb+i,n2*3**nb+j] =  \
                                         Di[n1,n2,st[n1,n2,i],st[n2,n1,j]]
 
-            elif self.typ == 'L' and PAIRS:
+            elif (self.typ == 'L' or self.typ == 'LM') and PAIRS:
 
 
                 dim = nat + 2 * nat * (nat - 1)
@@ -655,6 +718,7 @@ class ensemble(object):
                                     self.D[3*n1+j,3*n2+i] = 3*Di[n1,n2,j,i]
 
             else:
+                print(self.typ, PAIRS)
                 raise NameError('No such type')
 
             
@@ -1060,6 +1124,218 @@ class ensemble(object):
             self.TF_pp = TF_pp
             self.TB_pp = TB_pp
 
+            #S-matrix output
+
+            mkv = np.sign(self.kv)
+
+
+            self.SF1_pm = self.Transmittance
+            self.SB1_pm = self.Reflection
+
+            self.SF1_pp = self.iTransmittance
+            self.SB1_pp = self.iReflection
+
+            self.SF2_0m = mkv*1j*TF2_0m
+            self.SB2_0m = mkv*1j*TB2_0m
+
+            self.SF2_0p = mkv*1j*TF2_0p
+            self.SB2_0p = mkv*1j*TB2_0p
+
+            self.SF2_mm = 1j*TF2_mm
+            self.SB2_mm = 1j*TB2_mm
+
+            self.SF2_mp = 1j*TF2_mp
+            self.SB2_mp = 1j*TB2_mp
+
+            print('\n')
+
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
+            print('\n')
+
+        def Moller_for_Lambda(self):
+
+            """
+            Method calculates S matrix for Lambda atom. There is two global options, which is set by changing global
+            parameter SINGLE_RAMAN to 1 or 0. For 0 it calculates S matrix elements only for Rayleigh and Faraday
+            channels (without change of atomic polarization). For 1 it calculates these ... for changing polarization of
+            single atom in a whole atomic chain.
+
+            :return:
+            fullTransmittance and fullReflection
+            """
+
+            nat = self.nat
+            nb = 0
+            k = 1
+            kv = 1
+            c = 1
+            dim = nat * 3 ** nb
+            nof = len(self.deltaP)
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
+            # Decay rate for Lambda atom with respect of guided modes
+            gd = VACUUM_DECAY * 1 + 8 * d00 * d00 * np.pi * k * (
+                        (1 / self.vg - RADIATION_MODES_MODEL / c) * (abs(self.em) ** 2 + abs(self.ep) ** 2 + \
+                                                                     abs(
+                                                                         self.ez) ** 2) + FIRST * RADIATION_MODES_MODEL / c * abs(
+                    self.ez) ** 2 \
+                        + SECOND * RADIATION_MODES_MODEL / c * abs(self.ep) ** 2)
+            self.gd_wg = 8 * d00 * d00 * np.pi * k * ((1 / self.vg) * (
+                    1 * abs(1j * self.em[0] + self.ep[0]) ** 2 / 2 + 1 * abs(
+                -1j * self.em[0] + self.ep[0]) ** 2 / 2 + \
+                    0 * abs(self.ez[0]) ** 2))
+
+            self.gd_full = gd[0]
+            """
+            ________________________________________________________________
+            Definition of channels of Scattering
+            ________________________________________________________________
+            """
+            # Input
+            ddRight = np.zeros(nat * 3 ** nb, dtype=np.complex);
+            ddFullDecay = np.zeros(nat, dtype=np.complex);
+            rand_phase = np.random.rand(nat)*2*np.pi
+            """
+            ________________________________________________________________
+            Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
+            ________________________________________________________________
+            """
+            # Output
+
+            # +1, -
+            ddLeftF_pm = np.zeros(nat, dtype=np.complex);
+            ddLeftB_pm = np.zeros(nat, dtype=np.complex);
+
+            # +1, + (smwht like Faraday effect of magnitized atomic chain(!), no atomic transitions, will call it Faraday channel)
+            ddLeftF_pp = np.zeros(nat, dtype=np.complex);
+            ddLeftB_pp = np.zeros(nat, dtype=np.complex);
+
+
+            # Loop over atoms, from which the photon emits
+            for i in range(nat):
+
+                """
+                if RESONATOR==0:
+                    ddRight[i] = np.exp(1j*PHASE*i) / np.sqrt(nat)
+                elif RESONATOR==1:
+                    if i > nat/3 and i < 2*nat / 3:
+                        ddRight[i] = np.exp(1j*PHASE*i)/ np.sqrt(nat/3)
+
+                elif RESONATOR==2:
+                    if i<nat/2:
+                        ddRight[i] = np.exp(1j*PHASE*i)/ np.sqrt(nat/2)
+                elif RESONATOR==3:
+                    if i<nat/8:
+                        ddRight[i] = np.exp(1j*PHASE*i)/ np.sqrt(nat/8)
+
+                elif RESONATOR==4:
+                    if i >= nat*399/900 and i < nat * 500/900:
+                        ddRight[i] = np.exp(1j*PHASE*i)/ np.sqrt(nat/9)
+
+                elif RESONATOR==5:
+                    ddRight[i] = np.exp(1j*rand_phase[i])
+                """
+                if self._s == 'resonator':
+                    if i >= nat // 3 and i < (nat - nat//3):
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - 2*nat//3)
+                        if RANDOM_PHASE:
+                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - 2*nat//3)
+
+                elif self._s == 'big-resonator':
+                    if i >= 4 * ( nat // 9 ) and i < (nat - 4 * (nat // 9)):
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
+
+                elif self._s == 'big-side-mirror':
+                    if i >= nat // 9:
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
+
+                elif self._s == 'side-mirror':
+                    if i >= nat // 2:
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
+                        if RANDOM_PHASE:
+                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - nat//2)
+                elif self._s == 'chain':
+                    ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat)
+                    if RANDOM_PHASE:
+                        ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat)
+                """
+                ________________________________________________________________
+                Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
+                ________________________________________________________________
+                """
+
+                ddFullDecay[i] = np.exp(1j*PHASE*i)
+                # Rayleigh
+                ddLeftF_pm[i] = +d01 * np.exp(
+                    -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
+                ddLeftB_pm[i] = -d01 * np.exp(
+                    +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
+                # Faraday
+                ddLeftF_pp[i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (
+                self.ep[i])
+                ddLeftB_pp[i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (
+                self.ep[i])
+
+
+
+            self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
+            self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
+            self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
+
+            from core.wrap_bypass import get_solution
+
+            Resolventa = get_solution(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0],
+                                      RABI * self.rabi_well, DC) \
+                         * 2 * np.pi * hbar * kv / self.vg
+
+            self.AtomicDecay = Resolventa
+
+            TF_pm = np.dot(ddLeftF_pm, Resolventa)
+            TB_pm = np.dot(ddLeftB_pm, Resolventa)
+
+            TF_pp = np.dot(ddLeftF_pp, Resolventa)
+            TB_pp = np.dot(ddLeftB_pp, Resolventa)
+
+            self.Transmittance =  1j * TF_pm
+            self.Reflection = -1j * TB_pm
+
+            self.iTransmittance = +1j * TF_pp
+            self.iReflection = -1j * TB_pp
+
+
+            dm = np.empty([4, 4, nof], dtype=np.complex64)
+            """
+            Density Matrix of light 
+            0 - forward, minus
+            1 - forward, plus
+            2 - backward, minus
+            3 - backward, plus
+            """
+
+
+
+            self.fullTransmittance = dm[0, 0, :] + dm[1, 1, :]
+
+            self.fullReflection = dm[2, 2, :] + dm[3, 3, :]
+
+            self.SideScattering = 1 - self.fullTransmittance - self.fullReflection
+
+
+            # S-matrix output
+
+            mkv = np.sign(self.kv)
+
+            self.SF1_pm = self.Transmittance
+            self.SB1_pm = self.Reflection
+
+            self.SF1_pp = self.iTransmittance
+            self.SB1_pp = self.iReflection
+
+            print('\n')
+
             if OPPOSITE_SCATTERING:
                 self.kv = -self.kv
 
@@ -1315,6 +1591,13 @@ class ensemble(object):
             #S-matrix output
 
             mkv = np.sign(self.kv)
+            print(mkv)
+
+            self.SF1_pm = self.Transmittance
+            self.SB1_pm = self.Reflection
+
+            self.SF1_pp = self.iTransmittance
+            self.SB1_pp = self.iReflection
 
             self.SF2_0m = mkv*1j*TF2_0m
             self.SB2_0m = mkv*1j*TB2_0m
@@ -1328,6 +1611,318 @@ class ensemble(object):
             self.SF2_mp = 1j*TF2_mp
             self.SB2_mp = 1j*TB2_mp
 
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
+            print('\n')
+
+        def Moller_for_LambdaPairs(self):
+
+            """
+            Method calculates S matrix for Lambda atom. There is two global options, which is set by changing global
+            parameter SINGLE_RAMAN to 1 or 0. For 0 it calculates S matrix elements only for Rayleigh and Faraday
+            channels (without change of atomic polarization). For 1 it calculates these ... for changing polarization of
+            single atom in a whole atomic chain.
+
+            :return:
+            fullTransmittance and fullReflection
+            """
+
+            nat = self.nat
+            nb = self.nb
+            nof = len(self.deltaP)
+            k = 1
+            kv = 1
+            c = 1
+            dim = nat + 2*nat*(nat-1)
+
+
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
+            # Decay rate for Lambda atom with respect of guided modes
+            gd = VACUUM_DECAY * 1 + 8 * d00 * d00 * np.pi * k * (
+                        (1 / self.vg - RADIATION_MODES_MODEL / c) * (abs(self.em) ** 2 + abs(self.ep) ** 2 + \
+                                                                     abs(
+                                                                         self.ez) ** 2) + FIRST * RADIATION_MODES_MODEL / c * abs(
+                    self.ez) ** 2 \
+                        + SECOND * RADIATION_MODES_MODEL / c * abs(self.ep) ** 2)
+            self.gd_full = gd[0]
+            """
+            ________________________________________________________________
+            Definition of channels of Scattering
+            ________________________________________________________________
+            """
+            # Input
+            ddRight = np.zeros(dim, dtype=np.complex);
+            ddFullDecay = np.zeros(dim, dtype=np.complex);
+            rand_phase = np.random.rand(nat)*2*np.pi
+            """
+            ________________________________________________________________
+            Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
+            ________________________________________________________________
+            """
+            # Output
+
+            # +1, -
+            ddLeftF_pm = np.zeros(dim, dtype=np.complex);
+            ddLeftB_pm = np.zeros(dim, dtype=np.complex);
+
+            # +1, + (smwht like Faraday effect of magnitized atomic chain(!), no atomic transitions, will call it Faraday channel)
+            ddLeftF_pp = np.zeros(dim, dtype=np.complex);
+            ddLeftB_pp = np.zeros(dim, dtype=np.complex);
+
+
+            # 0, +
+            ddLeftF_0p = np.zeros([dim,nat], dtype=np.complex);
+            ddLeftB_0p = np.zeros([dim,nat], dtype=np.complex);
+
+            # 0, -
+            ddLeftF_0m = np.zeros([dim,nat], dtype=np.complex);
+            ddLeftB_0m = np.zeros([dim,nat], dtype=np.complex);
+
+            # -1, +
+            ddLeftF_mp = np.zeros([dim,nat], dtype=np.complex);
+            ddLeftB_mp = np.zeros([dim,nat], dtype=np.complex);
+
+            # -1, -
+            ddLeftF_mm = np.zeros([dim,nat], dtype=np.complex);
+            ddLeftB_mm = np.zeros([dim,nat], dtype=np.complex);
+
+            # Reduction of T-Raman-Matrix
+            # Summation over single-jump Raman channels
+
+            Tmatrix = lambda A: np.square(np.absolute(A))
+            Tmatrix_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)))
+            Tmatrix_reduce = lambda A: np.dot(A, np.conj(A))
+            DenMatrix_spur = lambda A, B: np.diag(np.dot(np.transpose(A), np.conj(B)))
+
+
+
+            # Loop over atoms, from which the photon emits
+            for i in range(dim):
+
+
+
+                if i < nat:
+                    # Initial channel
+                    if self._s == 'resonator':
+                        if i >= nat // 3 and i < (nat - nat // 3):
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - 2 * nat // 3)
+                            if RANDOM_PHASE:
+                                ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - 2 * nat // 3)
+
+                    elif self._s == 'big-resonator':
+                        if i >= 4 * (nat // 9) and i < (nat - 4 * (nat // 9)):
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+
+                    elif self._s == 'big-side-mirror':
+                        if i >= nat // 9:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+
+                    elif self._s == 'side-mirror':
+                        if i >= nat // 2:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+                            if RANDOM_PHASE:
+                                ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - nat // 2)
+                    elif self._s == 'chain':
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat)
+                        if RANDOM_PHASE:
+                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat)
+
+                    # elastic Rayleigh
+
+                    ddFullDecay[i] = np.exp(1j * PHASE * i)
+
+                    ddLeftF_pm[i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
+                    ddLeftB_pm[i] = -d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
+                    # inelastic Rayleigh
+                    ddLeftF_pp[i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
+                    ddLeftB_pp[i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * (self.ep[i])
+
+
+                    ddLeftF_0m[i, i] = +d01 * np.exp(
+                            -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
+                    ddLeftB_0m[i, i] = +d01 * np.exp(
+                            +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ez[i])
+
+                    ddLeftF_0p[i, i] = +d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                                          self.ez[i]
+                    ddLeftB_0p[i, i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                                          self.ez[i]
+
+                    ddLeftF_mm[i, i] = +d01 * np.exp(
+                            -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ep[i])
+                    ddLeftB_mm[i, i] = -d01 * np.exp(
+                            +1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.ep[i])
+
+                    ddLeftF_mp[i, i] = -d01 * np.exp(-1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                                          (self.em[i])
+                    ddLeftB_mp[i, i] = +d01 * np.exp(+1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * \
+                                          (self.em[i])
+
+
+                elif i >= nat:
+                    na = (i - nat) // (2*(nat-1))
+                    n =  (i - nat) % (2*(nat-1)) // 2
+                    m =  (i - nat) % (2*(nat-1)) % 2
+                    assert i == nat + 2*(nat-1)*na + 2*n + m
+
+                    ne = n
+                    if n >= na:
+                        ne += 1
+
+                    if m==1:
+                        # 0, +
+                        ddLeftF_0p[i,na] = -d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+                        ddLeftB_0p[i,na] = +d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+
+                        # 0, -
+                        ddLeftF_0m[i,na] = +d01 * np.exp(
+                            -1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
+                        ddLeftB_0m[i,na] = -d01 * np.exp(
+                            +1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
+
+
+                    elif m==0:
+
+                        # -1, +
+                        ddLeftF_mp[i,na] = -d01 * np.exp(-1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+                        ddLeftB_mp[i,na] = +d01 * np.exp(+1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * \
+                                                  self.ep[ne]
+
+                        # -1, -
+                        ddLeftF_mm[i,na] = +d01 * np.exp(
+                            -1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
+                        ddLeftB_mm[i,na] = -d01 * np.exp(
+                            +1j * self.kv * self.x0[ne, 0] * self.rr[ne, 0]) * np.conjugate(self.em[ne])
+
+
+
+            self.fullTransmittance = np.zeros(len(self.deltaP), dtype=float)
+            self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
+            self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
+
+            from core.wrap_bypass import get_solution_pairs
+
+            if EDGE_STABILIY == True:
+                gammaEs = np.zeros_like(self.deltaP)
+
+            Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC, EDGE_STABILIY) \
+                         * 2 * np.pi * hbar * kv/self.vg
+
+            self.AtomicDecay = Resolventa
+
+            TF_pm = np.dot(ddLeftF_pm, Resolventa)
+            TB_pm = np.dot(ddLeftB_pm, Resolventa)
+
+            TF_pp = np.dot(ddLeftF_pp, Resolventa)
+            TB_pp = np.dot(ddLeftB_pp, Resolventa)
+
+            self.Transmittance =+ 1j * TF_pm
+            self.Reflection = -1j * TB_pm
+
+            self.iTransmittance = +1j  * TF_pp
+            self.iReflection = -1j  * TB_pp
+
+
+            TF2_0m = np.dot(np.transpose(ddLeftF_0m), Resolventa)
+            TB2_0m = np.dot(np.transpose(ddLeftB_0m), Resolventa)
+
+            TF2_0p = np.dot(np.transpose(ddLeftF_0p), Resolventa)
+            TB2_0p = np.dot(np.transpose(ddLeftB_0p), Resolventa)
+
+            TF2_mm = np.dot(np.transpose(ddLeftF_mm), Resolventa)
+            TB2_mm = np.dot(np.transpose(ddLeftB_mm), Resolventa)
+
+            TF2_mp = np.dot(np.transpose(ddLeftF_mp), Resolventa)
+            TB2_mp = np.dot(np.transpose(ddLeftB_mp), Resolventa)
+
+            dm = np.empty([4,4,nof], dtype=np.complex64)
+            """
+            Density Matrix of light 
+            0 - forward, minus
+            1 - forward, plus
+            2 - backward, minus
+            3 - backward, plus
+            """
+
+            dm[0, 0, :] = DenMatrix_spur(TF2_0m, TF2_0m) + DenMatrix_spur(TF2_mm, TF2_mm) \
+                          + abs(np.ones(nof, dtype=np.complex64) + 1j* TF_pm) ** 2
+            dm[1, 1, :] = DenMatrix_spur(TF2_0p, TF2_0p) + DenMatrix_spur(TF2_mp, TF2_mp) + abs(TF_pp) ** 2
+            dm[2, 2, :] = DenMatrix_spur(TB2_0m, TB2_0m) + DenMatrix_spur(TB2_mm, TB2_mm) + abs(TB_pm) ** 2
+            dm[3, 3, :] = DenMatrix_spur(TB2_0p, TB2_0p) + DenMatrix_spur(TB2_mp, TB2_mp) + abs(TB_pp) ** 2
+
+            dm[0, 1, :] = DenMatrix_spur(TF2_0m, TF2_0p) + DenMatrix_spur(TF2_mm, TF2_mp) \
+                          + (np.ones(nof, dtype=np.complex64) + 1j* TF_pm) * np.conj(1j*TF_pp)
+            dm[0, 2, :] = DenMatrix_spur(TF2_0m, TB2_0m) + DenMatrix_spur(TF2_mm, TB2_mm) \
+                          + (np.ones(nof, dtype=np.complex64) + 1j* TF_pm) * np.conj(1j*TB_pm)
+            dm[0, 3, :] = DenMatrix_spur(TF2_0m, TB2_0p) + DenMatrix_spur(TF2_mm, TB2_mp) \
+                          + (np.ones(nof, dtype=np.complex64) + 1j* TF_pm) * np.conj(1j*TB_pp)
+            dm[1, 0, :] = np.conj(dm[0, 1, :])
+            dm[2, 0, :] = np.conj(dm[0, 2, :])
+            dm[3, 0, :] = np.conj(dm[0, 3, :])
+
+            dm[1, 2, :] = DenMatrix_spur(TF2_0p, TB2_0m) + DenMatrix_spur(TF2_mp, TB2_mm) + TF_pp*np.conj(TB_pm)
+            dm[1, 3, :] = DenMatrix_spur(TF2_0p, TB2_0p) + DenMatrix_spur(TF2_mp, TB2_mp) + TF_pp*np.conj(TB_pp)
+            dm[2, 1, :] = np.conj(dm[1, 2, :])
+            dm[3, 1, :] = np.conj(dm[1, 3, :])
+
+            dm[2, 3, :] = DenMatrix_spur(TB2_0m, TB2_0p) + DenMatrix_spur(TB2_mm, TB2_mp) + TB_pm*np.conj(TB_pp)
+            dm[3, 2, :] = np.conj(dm[2, 3, :])
+
+            self.fullTransmittance = dm[0, 0, :] + dm[1, 1, :]
+
+            self.fullReflection = dm[2, 2, :] + dm[3, 3, :]
+
+            self.SideScattering = 1 - self.fullTransmittance - self.fullReflection
+
+            self.dm = dm
+
+
+
+
+            self.TF2_0m = TF2_0m
+            self.TB2_0m = TB2_0m
+
+            self.TF2_0p = TF2_0p
+            self.TB2_0p = TB2_0p
+
+            self.TF2_mm = TF2_mm
+            self.TB2_mm = TB2_mm
+
+            self.TF2_mp = TF2_mp
+            self.TB2_mp = TB2_mp
+
+            #S-matrix output
+
+            mkv = np.sign(self.kv)
+            print(mkv)
+
+            self.SF1_pm = self.Transmittance
+            self.SB1_pm = self.Reflection
+
+            self.SF1_pp = self.iTransmittance
+            self.SB1_pp = self.iReflection
+
+            self.SF2_0m = mkv*1j*TF2_0m
+            self.SB2_0m = mkv*1j*TB2_0m
+
+            self.SF2_0p = mkv*1j*TF2_0p
+            self.SB2_0p = mkv*1j*TB2_0p
+
+            self.SF2_mm = 1j*TF2_mm
+            self.SB2_mm = 1j*TB2_mm
+
+            self.SF2_mp = 1j*TF2_mp
+            self.SB2_mp = 1j*TB2_mp
+
+            if OPPOSITE_SCATTERING:
+                self.kv = -self.kv
+
             print('\n')
 
         def reflection_calc(self):
@@ -1337,8 +1932,14 @@ class ensemble(object):
                 self.S_matrix_for_Lambda()
             elif self.typ == 'L' and PAIRS:
                 self.S_matrix_for_LambdaPairs()
+            elif self.typ == 'LM' and not PAIRS:
+                self.Moller_for_Lambda()
+            elif self.typ == 'LM' and PAIRS:
+                self.Moller_for_LambdaPairs()
             else:
                 raise NameError('Wrong type of atom')
+
+
                 
             
         def visualize(self,addit='',save=True):
@@ -1485,11 +2086,16 @@ OPPOSITE_SCATTERING = False
 RAMAN_BACKSCATTERING = False
 PAIRS = True
 FIX_RANDOM = True
+RESONATOR = True
+PHASE = 0 # np.pi/2, np.pi
+RANDOM_PHASE = False
 RABI = 1e-16#4#4+1e-16 #Rabi frequency
 DC = 0 #Rabi detuning
 SHIFT = 0
 RABI_HYP = False
 SEED = 5
+LMDA = 1.
+EDGE_STABILIY = True
 
 
 if not SINGLE_RAMAN and RAMAN_BACKSCATTERING:
@@ -1513,34 +2119,36 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':2, #number of atoms
+            'nat':33, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
             'l0': 2./2, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq
-            'typ':'L',  # L or V for Lambda and V atom resp.
+            'typ':'LM',  # L or V for Lambda and V atom resp.
             'ff': 0.3 #filling factor (for ff_chain only)
             }
 
     dtun = 10
     import matplotlib.pyplot as plt
 
-    PAIRS = False
-    SE0 = ensemble(**args)
-    SE0.L = 2*np.pi
-    SE0.generate_ensemble()
-
+    OPPOSITE_SCATTERING = False
     PAIRS = True
     SE1 = ensemble(**args)
     SE1.L = 2*np.pi
     SE1.generate_ensemble()
 
-    plt.plot(freq, SE1.SideScattering)
-    plt.plot(freq, SE0.SideScattering)
+    OPPOSITE_SCATTERING = True
+
+    SE0 = ensemble(**args)
+    SE0.L = 2*np.pi
+    SE0.generate_ensemble()
+    sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=0)
+    plt.plot(freq, SE0.fullReflection)
     plt.show()
 
+    print()
 
 
     #print(SE0.gd_wg)
