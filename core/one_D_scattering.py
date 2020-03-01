@@ -189,6 +189,39 @@ class ensemble(object):
 
                 z = step*z
 
+            elif s == 'custom-resonator':
+                x = self.d * a * np.ones(nat)
+                y = 0. * np.ones(nat)
+                if ACTIVE > 1:
+                    ACTIVE = 1.
+                n1 = np.int(0.5 * (1-ACTIVE) * nat)
+                n2 = np.int(0.5 * (1+ACTIVE) * nat)
+
+                z = np.arange(nat)
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1 and i < n2:
+                        z[i] += 0.5 * LMDA
+
+                    elif i >= n2:
+                        z[i] += 1 * LMDA
+
+                z = step * z
+
+            elif s == 'custom-side-mirror':
+                x = self.d * a * np.ones(nat)
+                y = 0. * np.ones(nat)
+                z = np.arange(nat)
+                n1 = nat * ACTIVE
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1:
+                        z[i] += 0.5
+                z = step * z
+
+
             elif s=='resonator':
                 x = self.d*a*np.ones(nat)
                 y = 0.*np.ones(nat)
@@ -1716,9 +1749,22 @@ class ensemble(object):
                         if i >= 4 * (nat // 9) and i < (nat - 4 * (nat // 9)):
                             ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
 
+                    elif self._s == 'custom-resonator':
+                        if ACTIVE > 1:
+                            ACTIVE = 1.
+                        n1 = np.int(0.5 * (1 - ACTIVE) * nat)
+                        n2 = np.int(0.5 * (1 + ACTIVE) * nat)
+                        if i>= n1 and i < n2:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat*ACTIVE)
+
                     elif self._s == 'big-side-mirror':
                         if i >= nat // 9:
                             ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+
+                    elif self._s == 'custom-side-mirror':
+                        n1 = nat*ACTIVE
+                        if i <= n1:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(n1)
 
                     elif self._s == 'side-mirror':
                         if i >= nat // 2:
@@ -1808,10 +1854,7 @@ class ensemble(object):
 
             from core.wrap_bypass import get_solution_pairs
 
-            if EDGE_STABILIY == True:
-                gammaEs = np.zeros_like(self.deltaP)
-
-            Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC, EDGE_STABILIY) \
+            Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
                          * 2 * np.pi * hbar * kv/self.vg
 
             self.AtomicDecay = Resolventa
@@ -2061,7 +2104,7 @@ a = 2*np.pi*200/780*lambd # nanofiber radius in units of Rb wavelength
 n0 = 1.45 #(silica)
 
 
-
+ACTIVE = 1.
 #dipole moments (Wigner-Eckart th.), atom properies
 
 d01 = np.sqrt(hbar*gd/4*(lambd**3))  #|F = 0, n = 0> <- |F0 = 1> - populated level
@@ -2095,8 +2138,6 @@ SHIFT = 0
 RABI_HYP = False
 SEED = 5
 LMDA = 1.
-EDGE_STABILIY = True
-
 
 if not SINGLE_RAMAN and RAMAN_BACKSCATTERING:
     SINGLE_RAMAN = True
