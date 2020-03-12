@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, 'core/')
 import one_D_scattering as ods
 import numpy as np
-from matplotlib import pyplot as plt
+
 from scipy.integrate import cumtrapz as ct
 from wave_pack import convolution, delay
 from wave_pack import inverse_pulse as pulse
@@ -85,45 +85,6 @@ def smooth(t, et):
     et = _func(t, *popt) / (popt[3] + popt[4] + popt[5])
 
     return t, et / et.max()
-
-
-def smtplot(x, y, *args, **kwargs):
-    x1, y1 = smooth(x, y / y.max())
-    plt.plot(x1, y1, *args, **kwargs)
-
-
-def decomposeplot(x, y, *args, **kwargs):
-    def _func(t, g1, g2, A1, A2, rabi, A3):
-        return A1 * np.exp(-1 * g1 * t) + A2 * np.exp(-1 * g2 * t)
-
-    lent = len(x)
-    lens = lent // 2
-
-    xt = x[lens:lent];
-    yt = np.real(y[lens:lent])
-
-    popt, pcov = curve_fit(_func, xt, yt / np.amax(yt), method='trf')
-
-    x1, y1 = x, np.exp(-1 * popt[0] * x)
-    x2, y2 = x, np.exp(-1 * popt[1] * x)
-    plt.plot(x1, y1, *args, **kwargs)
-    plt.plot(x2, y2, *args, **kwargs)
-
-
-def normalplot(t, et, *args, **kwargs):
-    def _func(t, g1, A1):
-        return A1 * np.exp(-1 * g1 * t)
-
-    lent = len(t)
-    lena = lent // 2
-    lenb = lent // 2 + lent // 20
-
-    t1 = t[lena:lenb];
-    et1 = np.real(et[lena:lenb])
-
-    popt, pcov = curve_fit(_func, t1, et1, method='trf')
-
-    plt.plot(t, et / _func(0.2, *popt), *args, **kwargs)
 
 
 def isiinthemiddle(i, noa, notright=False):
@@ -215,31 +176,75 @@ if True:
     t, blochFull = convolution(freq, np.dot(ddRight_full, resonator.AtomicDecay), np.ones_like(freq))
     fullDecay = abs(blochFull) ** 2
 
+try:
+    from matplotlib import pyplot as plt
 
-plt.rcParams.update({'font.size': 16})
-plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
-plt.grid(True, axis='y', which='both')
-plt.xlim([0,2])
-plt.ylim([0.1, 1.])
-plt.yscale('log')
-dcay = np.exp(-t)
-smtplot(t, (dickeDecay/dickeDecay.max()), 'r')
-smtplot(t, resDecay/resDecay.max(), 'g')
-smtplot(t, projresDecay/projresDecay.max(), 'b-')
-smtplot(t, inDecay/inDecay.max(), 'r--')
-smtplot(t, fullDecay/fullDecay.max(), 'b-.')
-#plt.plot(t, extresDecay/resDecay.max()/0.8, 'g')
-#plt.plot(t, extshiftresDecay/shiftresDecay.max()/0.8/0.88, 'g--')
-#smtplot(t, dresDecay/dresDecay.max(), 'm-.')
-#smtplot(t, rresDecay/rresDecay.max(), 'c--')
-#smtplot(t, dcay, 'k--')
-#plt.plot(t, sidemDecay/sidemDecay.max(), 'b')
-#smtplot(t, bigResDecay, 'r--')
-#smtplot(t, bigSidemDecay/bigSidemDecay.max(), 'r-.')
-plt.xlabel(r'$\gamma t$')
-plt.ylabel(r'$p(t)$')
-plt.savefig(CSVPATH + 'ms_stableedg.svg')
-plt.savefig('plot.svg')
+
+    def smtplot(x, y, *args, **kwargs):
+        x1, y1 = smooth(x, y / y.max())
+        plt.plot(x1, y1, *args, **kwargs)
+
+
+    def decomposeplot(x, y, *args, **kwargs):
+        def _func(t, g1, g2, A1, A2, rabi, A3):
+            return A1 * np.exp(-1 * g1 * t) + A2 * np.exp(-1 * g2 * t)
+
+        lent = len(x)
+        lens = lent // 2
+
+        xt = x[lens:lent];
+        yt = np.real(y[lens:lent])
+
+        popt, pcov = curve_fit(_func, xt, yt / np.amax(yt), method='trf')
+
+        x1, y1 = x, np.exp(-1 * popt[0] * x)
+        x2, y2 = x, np.exp(-1 * popt[1] * x)
+        plt.plot(x1, y1, *args, **kwargs)
+        plt.plot(x2, y2, *args, **kwargs)
+
+
+    def normalplot(t, et, *args, **kwargs):
+        def _func(t, g1, A1):
+            return A1 * np.exp(-1 * g1 * t)
+
+        lent = len(t)
+        lena = lent // 2
+        lenb = lent // 2 + lent // 20
+
+        t1 = t[lena:lenb];
+        et1 = np.real(et[lena:lenb])
+
+        popt, pcov = curve_fit(_func, t1, et1, method='trf')
+
+        plt.plot(t, et / _func(0.2, *popt), *args, **kwargs)
+
+    plt.rcParams.update({'font.size': 16})
+    plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
+    plt.grid(True, axis='y', which='both')
+    plt.xlim([0,2])
+    plt.ylim([0.1, 1.])
+    plt.yscale('log')
+    dcay = np.exp(-t)
+    smtplot(t, (dickeDecay/dickeDecay.max()), 'r')
+    smtplot(t, resDecay/resDecay.max(), 'g')
+    smtplot(t, projresDecay/projresDecay.max(), 'b-')
+    smtplot(t, inDecay/inDecay.max(), 'r--')
+    smtplot(t, fullDecay/fullDecay.max(), 'b-.')
+    #plt.plot(t, extresDecay/resDecay.max()/0.8, 'g')
+    #plt.plot(t, extshiftresDecay/shiftresDecay.max()/0.8/0.88, 'g--')
+    #smtplot(t, dresDecay/dresDecay.max(), 'm-.')
+    #smtplot(t, rresDecay/rresDecay.max(), 'c--')
+    #smtplot(t, dcay, 'k--')
+    #plt.plot(t, sidemDecay/sidemDecay.max(), 'b')
+    #smtplot(t, bigResDecay, 'r--')
+    #smtplot(t, bigSidemDecay/bigSidemDecay.max(), 'r-.')
+    plt.xlabel(r'$\gamma t$')
+    plt.ylabel(r'$p(t)$')
+    plt.savefig(CSVPATH + 'ms_stableedg.svg')
+    plt.savefig('plot.svg')
+
+except:
+    print('There will be no figure')
 
 dcay = np.exp(-t)
 ts, _ddecay = smooth(t, np.real(dickeDecay))
@@ -257,7 +262,7 @@ _, lines[:, 3] = smooth(t, resDecay)
 _, lines[:, 4] = smooth(t, projresDecay)
 _, lines[:, 5] = smooth(t, dcay)
 _, lines[:, 6] = smooth(t, inDecay)
- _, lines[:, 7] = smooth(t, fullDecay)
+_, lines[:, 7] = smooth(t, fullDecay)
 # _, lines[:, 8] = smooth(t, bigSidemDecay/bigSidemDecay.max())
 
 toMathematica('comparison', lines)
