@@ -256,6 +256,7 @@ def toMathematica(fname, *argv):
     np.savetxt(CSVPATH + fname + '.csv', toCsv, delimiter=',', fmt='%1.8f')
 
 
+
 lines[:, 0], lines[:, 1] = smooth(t, np.real(dickeDecay))
 _, lines[:, 2] = smooth(t, dickeDecay)
 _, lines[:, 3] = smooth(t, resDecay)
