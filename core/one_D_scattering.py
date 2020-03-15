@@ -192,8 +192,8 @@ class ensemble(object):
             elif s == 'custom-resonator':
                 x = self.d * a * np.ones(nat)
                 y = 0. * np.ones(nat)
-                if ACTIVE > 1:
-                    ACTIVE = 1.
+                #if ACTIVE > 1:
+                #    ACTIVE = 1.
                 n1 = np.int(0.5 * (1-ACTIVE) * nat)
                 n2 = np.int(0.5 * (1+ACTIVE) * nat)
 
@@ -601,7 +601,9 @@ class ensemble(object):
 
 
             if (self.typ == 'L' or self.typ == 'LM') and not PAIRS:
+                print('L or LM type and not PAIRS')
                 try:
+                    raise ValueError
 
 
                     from sigmaMatrix import returnForLambda
@@ -1229,7 +1231,6 @@ class ensemble(object):
             """
             # Input
             ddRight = np.zeros(nat * 3 ** nb, dtype=np.complex);
-            ddFullDecay = np.zeros(nat, dtype=np.complex);
             rand_phase = np.random.rand(nat)*2*np.pi
             """
             ________________________________________________________________
@@ -1271,36 +1272,51 @@ class ensemble(object):
                 elif RESONATOR==5:
                     ddRight[i] = np.exp(1j*rand_phase[i])
                 """
-                if self._s == 'resonator':
-                    if i >= nat // 3 and i < (nat - nat//3):
-                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - 2*nat//3)
+                if True:
+                    # Initial channel
+                    if self._s == 'resonator':
+                        if i >= nat // 3 and i < (nat - nat // 3):
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - 2 * nat // 3)
+                            if RANDOM_PHASE:
+                                ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - 2 * nat // 3)
+
+                    elif self._s == 'big-resonator':
+                        if i >= 4 * (nat // 9) and i < (nat - 4 * (nat // 9)):
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+
+                    elif self._s == 'custom-resonator':
+                        #if ACTIVE > 1:
+                        #    ACTIVE = 1.
+                        n1 = np.int(0.5 * (1 - ACTIVE) * nat)
+                        n2 = np.int(0.5 * (1 + ACTIVE) * nat)
+                        if i>= n1 and i < n2:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat*ACTIVE)
+
+                    elif self._s == 'big-side-mirror':
+                        if i >= nat // 9:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+
+                    elif self._s == 'custom-side-mirror':
+                        n1 = nat*ACTIVE
+                        if i <= n1:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(n1)
+
+                    elif self._s == 'side-mirror':
+                        if i >= nat // 2:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
+                            if RANDOM_PHASE:
+                                ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - nat // 2)
+                    elif self._s == 'chain':
+                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat)
                         if RANDOM_PHASE:
-                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - 2*nat//3)
-
-                elif self._s == 'big-resonator':
-                    if i >= 4 * ( nat // 9 ) and i < (nat - 4 * (nat // 9)):
-                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
-
-                elif self._s == 'big-side-mirror':
-                    if i >= nat // 9:
-                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
-
-                elif self._s == 'side-mirror':
-                    if i >= nat // 2:
-                        ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat//2)
-                        if RANDOM_PHASE:
-                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat - nat//2)
-                elif self._s == 'chain':
-                    ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat)
-                    if RANDOM_PHASE:
-                        ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat)
+                            ddRight[i] = np.exp(1j * rand_phase[i]) / np.sqrt(nat)
                 """
                 ________________________________________________________________
                 Rayleigh channels (m = +1 -> m'= +1, p = +1 -> p' = +1)
                 ________________________________________________________________
                 """
 
-                ddFullDecay[i] = np.exp(1j*PHASE*i)
+
                 # Rayleigh
                 ddLeftF_pm[i] = +d01 * np.exp(
                     -1j * self.kv * self.x0[i, 0] * self.rr[0, i]) * np.conjugate(self.em[i])
@@ -1318,11 +1334,15 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
             self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
-            from core.wrap_bypass import get_solution
+            #from core.wrap_bypass import get_solution
 
-            Resolventa = get_solution(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0],
-                                      RABI * self.rabi_well, DC) \
-                         * 2 * np.pi * hbar * kv / self.vg
+            #Resolventa = get_solution(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0],
+            #                          RABI * self.rabi_well, DC) \
+            #             * 2 * np.pi * hbar * kv / self.vg
+            from core.wrap_bypass import get_solution_pairs
+
+            Resolventa = get_solution_pairs(nat, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
+                         * 2 * np.pi * hbar * kv/self.vg
 
             self.AtomicDecay = Resolventa
 
@@ -1535,10 +1555,12 @@ class ensemble(object):
             self.fullReflection = np.zeros(len(self.deltaP), dtype=float)
             self.RamanBackscattering = np.empty([len(self.deltaP), self.nat])
 
+
             from core.wrap_bypass import get_solution_pairs
 
-            Resolventa = get_solution_pairs(dim, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
+            Resolventa = get_solution_pairs(nat, len(self.deltaP), nat, self.D, ddRight, self.deltaP, gd[0], RABI*self.rabi_well, DC) \
                          * 2 * np.pi * hbar * kv/self.vg
+
 
             TF_pm = np.dot(ddLeftF_pm, Resolventa)
             TB_pm = np.dot(ddLeftB_pm, Resolventa)
@@ -1750,8 +1772,8 @@ class ensemble(object):
                             ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
 
                     elif self._s == 'custom-resonator':
-                        if ACTIVE > 1:
-                            ACTIVE = 1.
+                        #if ACTIVE > 1:
+                        #    ACTIVE = 1.
                         n1 = np.int(0.5 * (1 - ACTIVE) * nat)
                         n2 = np.int(0.5 * (1 + ACTIVE) * nat)
                         if i>= n1 and i < n2:

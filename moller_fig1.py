@@ -20,7 +20,7 @@ pdGamma = 0.05  # 26.7#26.9#2*np.pi
 pdShift = +4
 
 # Number of atoms
-noa = 300
+noa = 1100
 
 # Calculation Scheme Setup
 ods.RABI_HYP = False
@@ -31,7 +31,7 @@ ods.DDI = 1
 ods.EDGE_STABILITY = False
 raz = 9600
 freq = np.linspace(-1600.5, 1600.5, raz)
-CSVPATH = 'data/m_pics_12.03.2020/'
+CSVPATH = 'data/m_pics_15.03.2020/'
 if not os.path.exists(CSVPATH):
     os.makedirs(CSVPATH)
 # First figure
@@ -108,15 +108,15 @@ ods.RADIATION_MODES_MODEL = True
 
 #First line - dicke state decay
 if True:
-
+    ods.ACTIVE = 100/1100
     ods.RADIATION_MODES_MODEL = 1
     ods.VACUUM_DECAY = 1
-    ods.PAIRS = True
+    ods.PAIRS = False
     ods.RANDOM_PHASE = False
     ods.PHASE = np.pi
     ods.EDGE_STABILIY = False
     args['s'] = 'chain'
-    args['nat'] = noa // 3
+    args['nat'] = np.int( noa * ods.ACTIVE )
     args['d'] = 1.5
     dicke = ods.ensemble(**args)
     dicke.generate_ensemble()
@@ -132,12 +132,12 @@ if True:
 if True:
     ods.RADIATION_MODES_MODEL = 1
     ods.VACUUM_DECAY = 1
-    ods.PAIRS = True
+    ods.PAIRS = False
     ods.RANDOM_PHASE = False
     ods.PHASE = np.pi
     ods.EDGE_STABILIY = False
     args['nat'] = noa
-    args['s'] = 'resonator'
+    args['s'] = 'custom-resonator'
     args['d'] = 1.5
     ods.LMDA = 0 * 1.
     resonator = ods.ensemble(**args)
@@ -145,12 +145,14 @@ if True:
 
     rAD = np.zeros_like(resonator.AtomicDecay)
 
+    print(resonator.AtomicDecay)
     for i in range(len(resonator.AtomicDecay[:, 0])):
 
         if isiinthemiddle(i, noa, True):
             _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
 
     resDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
+    print(resDecay)
 
     rAD = np.zeros_like(resonator.AtomicDecay)
 

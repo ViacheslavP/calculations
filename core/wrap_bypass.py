@@ -62,7 +62,7 @@ def get_solution(dim, nof, noa, Sigma, ddRight, freq, gamma, rabi, dc):
 
             print("Memory Error was found. Using iterations:")
             for i, om in enumerate(freq):
-                resolvent = csr_matrix(np.eye(dim) * (-om + rabi[0] ** 2 / (4 * (om - dc)) - 0.5j * gamma) + Sigma)
+                resolvent = csr_matrix(np.eye(dim) * (om + rabi[0] ** 2 / (4 * (om - dc)) - 0.5j * gamma) + Sigma)
                 scV[:, i] = spsolve(resolvent, ddRight)
 
         return scV
