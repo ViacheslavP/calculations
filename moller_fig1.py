@@ -86,20 +86,35 @@ def smooth(t, et):
 
     return t, et / et.max()
 
-
+#TODO!!!!!!!!!!!!!!!!!! WORKS VERY WRONG!!!!!!!!!!!!!
 def isiinthemiddle(i, noa, notright=False):
     if i < noa:
         ni = i
     else:
         ni = (i - noa) % (2 * (noa - 1)) // 2
 
-    if ni >= noa // 3 and ni < noa - noa // 3:
+    n1 = np.int(0.5 * (1 - ods.ACTIVE) * noa)
+    n2 = np.int(0.5 * (1 + ods.ACTIVE) * noa)
+    if ni >= n1 and ni < n2:
+        iisright=True
+    else:
+        iisright=notright
+
+    return iisright
+
+def isiintheside(i, noa, notright=False):
+    if i < noa:
+        ni = i
+    else:
+        ni = (i - noa) % (2 * (noa - 1)) // 2
+
+    n1 = noa * ods.ACTIVE
+    if ni <= n1:
         iisright = True
     else:
         iisright = notright
 
     return iisright
-
 
 ods.PAIRS = False
 ods.PHASE = np.pi
@@ -145,14 +160,12 @@ if True:
 
     rAD = np.zeros_like(resonator.AtomicDecay)
 
-    print(resonator.AtomicDecay)
     for i in range(len(resonator.AtomicDecay[:, 0])):
 
         if isiinthemiddle(i, noa, True):
             _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
 
     resDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
-    print(resDecay)
 
     rAD = np.zeros_like(resonator.AtomicDecay)
 
@@ -177,6 +190,122 @@ if True:
 
     t, blochFull = convolution(freq, np.dot(ddRight_full, resonator.AtomicDecay), np.ones_like(freq))
     fullDecay = abs(blochFull) ** 2
+
+    dcay = np.exp(-t)
+    ts, _ddecay = t, np.real(dickeDecay)
+    lines = np.empty((len(ts), 8), dtype=np.float32)
+
+
+    def toMathematica(fname, *argv):
+        toCsv = np.column_stack(argv)
+        np.savetxt(CSVPATH + fname + '.csv', toCsv, delimiter=',', fmt='%1.8f')
+
+    lines[:, 0], lines[:, 1] = t, np.real(dickeDecay)
+    lines[:, 2] = dickeDecay
+    lines[:, 3] = resDecay
+    lines[:, 4] = projresDecay
+    lines[:, 5] = dcay
+    lines[:, 6] = inDecay
+    lines[:, 7] = fullDecay
+
+    toMathematica('rg_res', lines)
+
+    ts, _ddecay = smooth(t, np.real(dickeDecay))
+    lines = np.empty((len(ts), 8), dtype=np.float32)
+
+    lines[:, 0], lines[:, 1] = smooth(t, np.real(dickeDecay))
+    _, lines[:, 2] = smooth(t, dickeDecay)
+    _, lines[:, 3] = smooth(t, resDecay)
+    _, lines[:, 4] = smooth(t, projresDecay)
+    _, lines[:, 5] = smooth(t, dcay)
+    _, lines[:, 6] = smooth(t, inDecay)
+    _, lines[:, 7] = smooth(t, fullDecay)
+    # _, lines[:, 8] = smooth(t, bigSidemDecay/bigSidemDecay.max())
+
+    toMathematica('sm_res', lines)
+
+#side-mirror
+if True:
+    ods.RADIATION_MODES_MODEL = 1
+    ods.VACUUM_DECAY = 1
+    ods.PAIRS = False
+    ods.RANDOM_PHASE = False
+    ods.PHASE = np.pi
+    ods.EDGE_STABILIY = False
+    args['nat'] = noa
+    args['s'] = 'custom-side-mirror'
+    args['d'] = 1.5
+    ods.LMDA = 0 * 1.
+    resonator = ods.ensemble(**args)
+    resonator.generate_ensemble()
+
+    rAD = np.zeros_like(resonator.AtomicDecay)
+
+    for i in range(len(resonator.AtomicDecay[:, 0])):
+
+        if isiinthemiddle(i, noa, True):
+            _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
+
+    smDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
+
+    rAD = np.zeros_like(resonator.AtomicDecay)
+
+    for i in range(len(resonator.AtomicDecay[:, 0])):
+
+        if isiinthemiddle(i, noa, False):
+            _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
+
+    projresDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
+
+    ddRight_in = np.zeros_like(resonator.AtomicDecay[:, 0])
+    ddRight_full = np.zeros_like(resonator.AtomicDecay[:, 0])
+
+    for i in range(noa):
+        if isiinthemiddle(i, noa, False):
+            ddRight_in[i] = (-1) ** i
+
+        ddRight_full[i] = (-1) ** i
+
+    t, blochIn = convolution(freq, np.dot(ddRight_in, resonator.AtomicDecay), np.ones_like(freq))
+    inDecay = abs(blochIn) ** 2
+
+    t, blochFull = convolution(freq, np.dot(ddRight_full, resonator.AtomicDecay), np.ones_like(freq))
+    fullDecay = abs(blochFull) ** 2
+
+    dcay = np.exp(-t)
+    ts, _ddecay = t, np.real(dickeDecay)
+    lines = np.empty((len(ts), 8), dtype=np.float32)
+
+
+    def toMathematica(fname, *argv):
+        toCsv = np.column_stack(argv)
+        np.savetxt(CSVPATH + fname + '.csv', toCsv, delimiter=',', fmt='%1.8f')
+
+
+    lines[:, 0], lines[:, 1] = t, np.real(dickeDecay)
+    lines[:, 2] = dickeDecay
+    lines[:, 3] = resDecay
+    lines[:, 4] = projresDecay
+    lines[:, 5] = dcay
+    lines[:, 6] = inDecay
+    lines[:, 7] = fullDecay
+
+    toMathematica('rg_sdm', lines)
+
+    ts, _ddecay = smooth(t, np.real(dickeDecay))
+    lines = np.empty((len(ts), 8), dtype=np.float32)
+
+    lines[:, 0], lines[:, 1] = smooth(t, np.real(dickeDecay))
+    _, lines[:, 2] = smooth(t, dickeDecay)
+    _, lines[:, 3] = smooth(t, resDecay)
+    _, lines[:, 4] = smooth(t, projresDecay)
+    _, lines[:, 5] = smooth(t, dcay)
+    _, lines[:, 6] = smooth(t, inDecay)
+    _, lines[:, 7] = smooth(t, fullDecay)
+    # _, lines[:, 8] = smooth(t, bigSidemDecay/bigSidemDecay.max())
+
+    toMathematica('sm_sdm', lines)
+
 
 try:
     from matplotlib import pyplot as plt

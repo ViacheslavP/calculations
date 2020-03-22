@@ -27,6 +27,71 @@ def convolution(freq_c, kernel, pulse, vg=0.7):
     fim = fim[_sw]
     return time, fim
 
+def convolution_pad(freq_c, kernel, pulse, extnumber = 20):
+    im  = np.multiply(kernel, pulse)
+    #extent freqs:
+    df = abs(freq_c[0] - freq_c[1])
+    nof = freq_c.size
+    edge = (2 * extnumber - 1)*( nof // 2 )
+    if nof % 2 == 1:
+        raise ValueError("Odd number of frequencies: unexpected results might happen")
+    freq_ext = np.fft.fftfreq(nof*2*extnumber) * df * nof*2*extnumber
+    _sf = np.argsort(freq_ext)
+    freq_ext = freq_ext[_sf]
+
+    im_pad = np.pad(im, (edge, edge), 'constant', constant_values=(0,0))
+    #im_pad = im_pad - im_pad[-1]
+
+    if len(im_pad) != len(freq_ext):
+        raise ValueError("Array lens do not match")
+
+    time, fim = FIT(im_pad,freq_ext)
+    _sw = np.argsort(time)
+    time = time[_sw];# time = time[0:-1:2*extnumber]; time = np.delete(time, [nof//2, nof//2 - 1])
+    fim = fim[_sw];# fim = fim[0:-1:2*extnumber]; fim = np.delete(fim, [nof//2, nof//2 - 1])
+    return time, fim
+
+def convolution_scaling(freq_c, kernel, pulse, extnumber = 20):
+    def edge_function(om, A):
+        return A / om
+
+    def adv_edge_function(om, A, B):
+        return A / (om + B)
+
+    df = abs(freq_c[0] - freq_c[1])
+    nof = freq_c.size
+    edge = (2 * extnumber - 1) * (nof // 2)
+    if nof % 2 == 1:
+        raise ValueError("Odd number of frequencies: unexpected results might happen")
+    freq_ext = np.fft.fftfreq(nof * 2 * extnumber) * df * nof * 2 * extnumber
+    _sf = np.argsort(freq_ext)
+    freq_ext = freq_ext[_sf]
+
+    im = np.multiply(kernel, pulse)
+    im_pad = np.pad(im, (edge, edge), 'constant', constant_values=(0, 0))
+    adv = True
+    if not adv:
+        Am = freq_c[0] * im[0]
+        Ap = freq_c[-1] * im[-1]
+
+        im_pad[0:edge] = edge_function(freq_ext[0:edge], Am)
+        im_pad[-edge:] = edge_function(freq_ext[-edge:], Ap)
+    else:
+        Am = (freq_c[1] - freq_c[0]) / (1/im[1] - 1/im[0])
+        Bm = Am / im[0] - freq_c[0]
+
+        Ap = (freq_c[-2] - freq_c[-1]) / (1/im[-2] - 1/im[-1])
+        Bp = Am / im[-1] - freq_c[-1]
+
+        im_pad[0:edge] = adv_edge_function(freq_ext[0:edge], Am, Bm)
+        im_pad[-edge:] = adv_edge_function(freq_ext[-edge:], Ap, Bp)
+
+
+    time, fim = FIT(im_pad, freq_ext)
+    _sw = np.argsort(time)
+    time = time[_sw];  #time = time[0:-1:2*extnumber]; #time = np.delete(time, [nof//2, nof//2 - 1])
+    fim = fim[_sw];  #fim = fim[0:-1:2*extnumber]; #fim = np.delete(fim, [nof//2, nof//2 - 1])
+    return time, fim
 
 def rect_pulse(om, gamma):
     T0 = 1/gamma

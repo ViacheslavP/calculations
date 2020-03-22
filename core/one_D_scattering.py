@@ -15,8 +15,10 @@ try:
     mkl.set_num_threads(mkl.get_max_threads())
     mkl.service.set_num_threads(mkl.get_max_threads())
     
-except ImportError:
+except:
     pass
+
+
     
 import numpy as np
 from scipy.sparse import linalg as alg
