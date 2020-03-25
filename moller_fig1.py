@@ -243,7 +243,7 @@ if True:
 
     for i in range(len(resonator.AtomicDecay[:, 0])):
 
-        if isiinthemiddle(i, noa, True):
+        if isiintheside(i, noa, True):
             _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
 
     smDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
@@ -252,7 +252,7 @@ if True:
 
     for i in range(len(resonator.AtomicDecay[:, 0])):
 
-        if isiinthemiddle(i, noa, False):
+        if isiintheside(i, noa, False):
             _, rAD[i, :] = convolution(freq, resonator.AtomicDecay[i, :], np.ones_like(freq))
 
     projresDecay = np.dot(np.conj(np.transpose(rAD)), rAD).diagonal()
@@ -261,7 +261,7 @@ if True:
     ddRight_full = np.zeros_like(resonator.AtomicDecay[:, 0])
 
     for i in range(noa):
-        if isiinthemiddle(i, noa, False):
+        if isiintheside(i, noa, False):
             ddRight_in[i] = (-1) ** i
 
         ddRight_full[i] = (-1) ** i
