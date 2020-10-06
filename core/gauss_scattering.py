@@ -80,106 +80,13 @@ class ensemble(object):
                 np.random.seed(seed=SEED)
 
             if s == 'chain':
-                x = self.d*np.ones(nat)                 # [d,d,d...]
-                y = np.zeros(nat)                       # [0,0,0...]
+                x = self.d_x*np.ones(nat)                 # [d,d,d...]
+                y = self.d_y*np.zeros(nat)                       # [0,0,0...]
                 z = (np.arange(nat)-(nat-1.)/2.)*step   # [-(N-1)/2*step,...,(N-1)/2*step]
 
 
-            elif s == 'nocorrchain':
-                x = self.d*np.ones(nat)                 # [d,d,d...]
-                y = 0.*np.ones(nat)
-                L = (nat-1)*step
-                z = np.random.rand(nat)*L
-                z = np.sort(z)
-                z0 = 1/nat * sum(z)
-                z = z-z0                                # Centering
-            elif s=='square':
 
-                nr = np.int64(np.sqrt(nat))
-                if np.int64(nat) != nr*nr:
-                    raise ValueError
-                x = np.zeros(nat)                 # [d,d,d...]
-                y = np.zeros(nat)                       # [0,0,0...]
-                z = np.zeros(nat)
-                symfoo = (np.arange(nr) - (nr-1)/2.)*step
-                for i in range(nr):
-                    for j in range(nr):
-                        x[i*nr + j] = symfoo[i]
-                        y[i*nr + j] = symfoo[j]
-                print(x,y)
-
-
-
-            elif s=='doublechain':
-                x = self.d*a*np.asarray([np.sign(i - nat/2) for i in range(nat)])
-                y = 0.*np.ones(nat)
-                goo = [i for i in range(nat//2)]
-                z = np.asarray(goo+goo)*step
-            
-            
-            elif s=='ff_chain':
-                if self.ff>0.99:
-                    raise ValueError
-                
-                N = int( nat / self.ff )
-                L = N*self.step
-                """
-                
-                Creates a chain with a filling factor = ff 
-                I think that is not possible to have a two atoms in same location
-                within this alghoritm 
-                
-                """
-                x = self.d*a*np.ones(nat)
-                y = 0.*np.ones(nat)
-                z = (np.arange(nat)+np.sort(np.random.randint(N-nat,size=nat)))*step
-            elif s == '45':
-                x = self.d*a*np.ones(nat) /np.sqrt(2)
-                y = -self.d*a*np.ones(nat) / np.sqrt(2)
-                z = np.arange(nat)*step
-
-            #Mirror-quench were just setups to prove that from left and from right our system
-            #looks different for
-
-            elif s=='mirror_quench':
-                x = self.d * a * np.ones(nat)
-                y = 0. * np.ones(nat)
-                n1 = nat//2
-                n2 = nat - n1
-                foo = []
-                for i in range(nat):
-                    if i < n1:
-                        foo.append(i)
-                    else:
-                        foo.append(n1+0.5*(i-n1))
-                z = step*np.asarray(foo)
-
-
-
-            elif s=='quench_mirror':
-                x = self.d * a * np.ones(nat)
-                y = 0. * np.ones(nat)
-                n1 = nat//2
-                n2 = nat - n1
-                foo = []
-                n1 = nat//2
-                n2 = nat - n1
-                foo = []
-                for i in range(nat):
-                    if i < n1:
-                        foo.append(0.5*i)
-                    else:
-                        foo.append(i - 0.5*n1)
-                z = step*np.asarray(foo)
-
-
-            elif s == 'peculiar':
-                from Garbage.densityIter import rhoMCMC
-                x = self.d*a*np.ones(nat)
-                y = 0.*np.ones(nat)
-                z = 2*step*rhoMCMC(nat)
-                z = np.sort(z)
-
+            elif s == 'one'
             else:
                 raise NameError('Ensemble type not found')
             
@@ -189,7 +96,7 @@ class ensemble(object):
                 #y+= np.random.normal(0.0, dist*step, nat)
                 z+= np.random.normal(0.0, dist*step, nat)
             
-            
+
 
             t1 = time()
 

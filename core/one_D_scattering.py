@@ -331,6 +331,30 @@ class ensemble(object):
                 z = 2*step*rhoMCMC(nat)
                 z = np.sort(z)
 
+
+            elif s == 'atom_in_cavity':
+                if nat % 2 == 1:
+                    raise ValueError("Number of atoms has to be even for aic")
+                x = self.d * a * np.ones(nat)
+                y = 0. * np.ones(nat)
+                # if ACTIVE > 1:
+                #    ACTIVE = 1.
+                n1 = nat // 2
+                n2 = 1 + nat // 2
+
+                z = np.arange(nat)
+                for i, _ in enumerate(z):
+                    if i < n1:
+                        pass
+                    elif i >= n1 and i < n2:
+                        z[i] += 0.5
+
+                    elif i >= n2:
+                        z[i] += 1
+
+                z = step * z
+
+
             else:
                 raise NameError('Ensemble type not found')
             
@@ -1294,6 +1318,15 @@ class ensemble(object):
                         if i>= n1 and i < n2:
                             ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat*ACTIVE)
 
+
+                    elif self._s == 'atom_in_cavity':
+                        #if ACTIVE > 1:
+                        #    ACTIVE = 1.
+                        n1 = nat //2
+                        n2 = 1+nat//2
+                        if i>= n1 and i < n2:
+                            ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat*ACTIVE)
+
                     elif self._s == 'big-side-mirror':
                         if i >= nat // 9:
                             ddRight[i] = np.exp(1j * PHASE * i) / np.sqrt(nat - nat // 2)
@@ -1427,6 +1460,12 @@ class ensemble(object):
                                                                          self.ez) ** 2) + FIRST * RADIATION_MODES_MODEL / c * abs(
                     self.ez) ** 2 \
                         + SECOND * RADIATION_MODES_MODEL / c * abs(self.ep) ** 2)
+
+            self.gd_wg = 8 * d00 * d00 * np.pi * k * ((1 / self.vg) * (
+                        1 * abs(1j * self.em[0] + self.ep[0]) ** 2 / 2 + 1 * abs(
+                    -1j * self.em[0] + self.ep[0]) ** 2 / 2 + \
+                        0 * abs(self.ez[0]) ** 2))
+
             self.gd_full = gd[0]
             """
             ________________________________________________________________
@@ -1704,6 +1743,12 @@ class ensemble(object):
                                                                          self.ez) ** 2) + FIRST * RADIATION_MODES_MODEL / c * abs(
                     self.ez) ** 2 \
                         + SECOND * RADIATION_MODES_MODEL / c * abs(self.ep) ** 2)
+
+            self.gd_wg = 8 * d00 * d00 * np.pi * k * ((1 / self.vg) * (
+                        1 * abs(1j * self.em[0] + self.ep[0]) ** 2 / 2 + 1 * abs(
+                    -1j * self.em[0] + self.ep[0]) ** 2 / 2 + \
+                        0 * abs(self.ez[0]) ** 2))
+
             self.gd_full = gd[0]
             """
             ________________________________________________________________
@@ -2146,12 +2191,12 @@ freq = np.linspace(-15,15, 980)*gd
 
 RADIATION_MODES_MODEL = 0 # = 1 iff assuming our model of radiation modes =0 else
 DDI = 1
-VACUUM_DECAY = 0# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
+VACUUM_DECAY = 1# = 0 iff assuming only decay into fundamental mode, =1 iff decay into fundamental and into radiation
 PARAXIAL = 1 # = 0 iff paraxial, =1 iff full mode
 SINGLE_RAMAN = True
 OPPOSITE_SCATTERING = False
 RAMAN_BACKSCATTERING = False
-PAIRS = True
+PAIRS = False
 FIX_RANDOM = True
 RESONATOR = True
 PHASE = 0 # np.pi/2, np.pi
@@ -2184,36 +2229,33 @@ if __name__ == '__main__':
     #rc('text', usetex=True)
 
     args = {
-            'nat':33, #number of atoms
+            'nat':1, #number of atoms
             'nb':0, #number of neighbours in raman chanel (for L-atom only)
             's':'chain', #Stands for atom positioning : chain, nocorrchain and doublechain
             'dist':0.,  # sigma for displacement (choose 'chain' for gauss displacement., \lambda/2 units)
             'd' : 1.5, # distance from fiber
             'l0': 2./2, # mean distance between atoms (in lambda_m /2 units)
             'deltaP':freq,  # array of freq
-            'typ':'LM',  # L or V for Lambda and V atom resp.
+            'typ':'L',  # L or V for Lambda and V atom resp.
             'ff': 0.3 #filling factor (for ff_chain only)
             }
 
     dtun = 10
     import matplotlib.pyplot as plt
 
-    OPPOSITE_SCATTERING = False
-    PAIRS = True
-    SE1 = ensemble(**args)
-    SE1.L = 2*np.pi
-    SE1.generate_ensemble()
 
-    OPPOSITE_SCATTERING = True
 
     SE0 = ensemble(**args)
     SE0.L = 2*np.pi
     SE0.generate_ensemble()
+    SE0.reflection_calc()
     sq_reduce = lambda A: np.add.reduce(np.square(np.absolute(A)), axis=0)
-    plt.plot(freq, SE0.fullReflection)
+    print(SE0.gd_wg)
+    plt.plot(freq, abs(SE0.Reflection)**2)
+    plt.plot(freq, abs(SE0.Transmittance)**2)
     plt.show()
 
-    print()
+    print('gd wg', SE0.gd_wg)
 
 
     #print(SE0.gd_wg)

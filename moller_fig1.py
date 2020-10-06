@@ -86,7 +86,6 @@ def smooth(t, et):
 
     return t, et / et.max()
 
-#TODO!!!!!!!!!!!!!!!!!! WORKS VERY WRONG!!!!!!!!!!!!!
 def isiinthemiddle(i, noa, notright=False):
     if i < noa:
         ni = i

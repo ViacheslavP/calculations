@@ -59,13 +59,13 @@ freq = np.linspace(-20,20,980)
 pdTime = 2*np.pi # pulse time, gammma^-1
 
 noa = 1000 #Number of atoms
-
+nom = 100
 
 
 args = {
     'nat': noa,  # number of atoms
     'nb': 0,  # number of neighbours in raman chanel (for L-atom only)
-    's': 'chain',  # Stands for atom positioning : chain, nocorrchain and doublechain
+    's': 'nocorrchain',  # Stands for atom positioning : chain, nocorrchain and doublechain
     'dist': 0.,  # sigma for displacement (choose 'chain' for gauss displacement.)
     'd': 1.5,  # distance from fiber
     'l0': 2.01/2,  # mean distance between atoms (in lambda_m /2 units)
@@ -74,13 +74,25 @@ args = {
     'ff': 0.3
     }
 ods.RADIATION_MODES_MODEL = 1
-se0 = ods.ensemble(**args)
-se0.generate_ensemble()
+T = np.zeros_like(freq)
+R = T.copy()
+for i in range(nom):
+    se0 = ods.ensemble(**args)
+    se0.generate_ensemble()
+    T += abs(se0.Transmittance)**2
+    R += abs(se0.Reflection)**2
 
-toMathematica('withDDI', freq, se0.fullTransmittance, se0.fullReflection)
+
+toMathematica('withDDI', freq, T/nom, R/nom)
 
 ods.RADIATION_MODES_MODEL = 0
-se0 = ods.ensemble(**args)
-se0.generate_ensemble()
 
-toMathematica('withoutDDI', freq, se0.fullTransmittance, se0.fullReflection)
+T = np.zeros_like(freq)
+R = T.copy()
+for i in range(nom):
+    se0 = ods.ensemble(**args)
+    se0.generate_ensemble()
+    T += abs(se0.Transmittance)**2
+    R += abs(se0.Reflection)**2
+
+toMathematica('withoutDDI', freq, T/nom, R/nom)

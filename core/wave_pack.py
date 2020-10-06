@@ -9,8 +9,11 @@ def FIT(array, freq):
     domega = freq[1]-freq[0]
     FIT_array = np.fft.fft(array)
     time = np.fft.fftfreq(array.size)*2*np.pi/domega
-    FIT_array *= domega * np.exp(-1j * (freq[0]+freq[-1])/2 * time) / (2 * np.pi)
+    FIT_array = np.multiply(FIT_array, domega * np.exp(-1j * (freq[0]+freq[-1])/2 * time) / (2 * np.pi))
+
     return time, FIT_array
+
+
 
 def revFIT(FIT_array, time):
     dt = time[1]-time[0]
@@ -26,6 +29,21 @@ def convolution(freq_c, kernel, pulse, vg=0.7):
     time = time[_sw]
     fim = fim[_sw]
     return time, fim
+
+
+def convolution2(time, freq_c, kernel, pulse):
+    #Sticks and stones
+    im = np.multiply(kernel, pulse)
+    domega = freq_c[1] - freq_c[0]
+    res = np.zeros_like(time, dtype=np.complex)
+    for i, ti in enumerate(time):
+        integrand = np.multiply(np.exp(-1j*ti*freq_c), im)
+        res[i] = np.trapz(np.real(integrand), freq_c, domega) + 1j * np.trapz(np.imag(integrand), freq_c, domega)
+
+    return res
+
+
+
 
 def convolution_pad(freq_c, kernel, pulse, extnumber = 20):
     im  = np.multiply(kernel, pulse)
